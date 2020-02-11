@@ -205,7 +205,7 @@ void nullModelClass::fitNullModel()
     tau0 = tau;
     updateTau();
     
-    if(isnan(tau))
+    if(std::isnan(tau))
       stop("Parameter tau is NA.");
     
     cout << "beta: " << endl << beta << endl;
