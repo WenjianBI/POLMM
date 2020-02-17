@@ -9,6 +9,6 @@ install_github("WenjianBi/POLMM")
 library(POLMM)
 ?POLMM  # manual of POLMM() function with an example code
 ```
-Current version is 0.1.0. For older version and version update information, plesase refer to OldVersions/
+Current version is 0.1.1. For older version and version update information, plesase refer to OldVersions/
 
 Please do not hesitate to contact me (wenjianb@umich.edu) if you meet any problem. Suggestions or comments are also welcome.
