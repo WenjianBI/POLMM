@@ -37,6 +37,7 @@ an R object of 'POLMM_NULL' with the following elements, J is number of categori
 \item{yVec}{A matrix (N x J) to indicate the categorical phenotypes.}
 \item{muMat}{A matrix (N x J), probability in each category.}
 \item{YMat}{A matrix (N x (J-1)), working variable in each category.}
+\item{subjIDs}{A vector of individual IDs in null model}
 \item{LOCOList}{Objects for Step 2 calculation. Might be large if sample size is large and number of chromosomes is large. For example, when analyzing UK Biobank with xx individuals and xx chromosomes, this object is xx Gb.}
 \item{controlList}{List of control arguments. More details can be seen in 'Details' Section.}
 \item{sessionInfo}{Information of R session when analysis}

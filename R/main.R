@@ -47,6 +47,7 @@
 #' \item{yVec}{A matrix (N x J) to indicate the categorical phenotypes.}
 #' \item{muMat}{A matrix (N x J), probability in each category.}
 #' \item{YMat}{A matrix (N x (J-1)), working variable in each category.}
+#' \item{subjIDs}{A vector of individual IDs in null model}
 #' \item{LOCOList}{Objects for Step 2 calculation. Might be large if sample size is large and number of chromosomes is large. For example, when analyzing UK Biobank with xx individuals and xx chromosomes, this object is xx Gb.}
 #' \item{controlList}{List of control arguments. More details can be seen in 'Details' Section.}
 #' \item{sessionInfo}{Information of R session when analysis}
@@ -94,6 +95,7 @@ POLMM_Null_Model = function(formula,
   
   if(subjMatch){
     warning("Arguments 'subjData' and 'subjPlink' are ignored since 'subjMatch=T'.")
+    subjData = paste0("subj",1:n)
     posSampleInPlink = 1:n
   }else{
     if(missing(subjData) | missing(subjPlink)){
@@ -142,6 +144,7 @@ POLMM_Null_Model = function(formula,
   
   obj_Null$sessionInfo = sessionInfo()
   obj_Null$time = Sys.time()
+  obj_Null$subjIDs = subjData
   
   class(obj_Null) = "POLMM_NULL"
   return(obj_Null)
@@ -200,22 +203,23 @@ updateCtrl = function(control.new){
 #' Test for association between genotype and an ordinal categorical variable via Proportional Odds Logistic Mixed Model (POLMM)
 #' 
 #' Test for association between genotype and an ordinal categorical variable via Proportional Odds Logistic Mixed Model (POLMM)
-#' @param GMat a numeric genotype matrix with each row as an individual and each column as a marker. Column names of marker IDs are required.
+#' @param GMat a numeric genotype matrix with each row as an individual and each column as a marker. Column names of marker IDs and row names of individual IDs are required.
 #' @param obj_Null an output object of the POLMM_Null_Model() function 
 #' @param chrVec a character or character vector to specify chromosome(s) of the markers in GMat.
 #' @param minMAF a cutoff of the minimal minor allele frequencies (MAFs). Any markers with MAF < cutoff will be excluded from the analysis.
+#' @param SPAcutoff a standard deviation cutoff (default=2). If the test statistic lies within the standard deviation cutoff of the mean, p value based on traditional score test is returned. Otherwise, p value is calculated based on saddlepoint approximation.
 #' @return an R matrix with the following elements
 #' \item{ID}{Marker IDs from colnames(GMat)}
 #' \item{MAF}{MAFs of the markers}
 #' \item{Stat}{Score statistics}
-#' \item{VarW}{Estimated variance (VarW) from non-mixed effect model}
+#' \item{VarW}{Estimated variance (VarW) from non-mixed model}
 #' \item{VarP}{Estimated variance after adjusting for variance ratio r (VarP = VarW * r)}
 #' \item{pval.norm}{p values calculated from normal approximation}
 #' \item{pval.spa}{p values calculated from saddlepoint approximation}
 #' @examples 
 #' ## We use a Plink file with 10,000 markers and 1,000 subjects to constract GRM for demonstration. 
 #' ## For real data analysis, we recommend >= 100,000 common markers (MAF > 0.05 or 0.01).
-#' ## Selection of the common markers are similar as in Principle Components Analysis (PCA).
+#' ## Selection of the common markers is similar as in Principle Components Analysis (PCA).
 #' famFile = system.file("extdata", "nSNPs-10000-nsubj-1000-ext.fam", package = "POLMM")
 #' PlinkFile = gsub("-ext.fam","-ext",famFile)
 #' dataFile = system.file("extdata", "POLMM_data.csv", package = "POLMM")
@@ -229,21 +233,38 @@ updateCtrl = function(control.new){
 #' ## If control$seed is not changed, objNull$tau should be 0.705
 #' objNull$tau
 #' 
-#' ## when using SAIGE.POLMM, chrVec should be from
+#' ## when using function POLMM(), argument chrVec should be from
 #' names(objNull$LOCOList)
 #' 
 #' GMat = matrix(rbinom(10000,2,0.3),1000,10)
+#' rownames(GMat) = egData$IID
 #' colnames(GMat) = paste0("rs",1:10)
 #' outPOLMM = POLMM(GMat, objNull, "1", 0.001)
 POLMM = function(GMat,            # n x m matrix
                  obj_Null,
                  chrVec,
-                 minMAF)
+                 minMAF,
+                 SPAcutoff=2)
 {
   if(class(obj_Null)!="POLMM_NULL")
     stop("class(obj_Null) should be 'POLMM_NULL'")
   
-  n = nrow(GMat);
+  subjIDs = rownames(GMat)
+  SNPIDs = colnames(GMat)
+  
+  if(is.null(subjIDs) | is.null(SNPIDs))
+    stop("rownames and colnames of GMat are required!")
+  if(anyDuplicated(subjIDs) | anyDuplicated(SNPIDs))
+    stop("all elements of either subjIDs or SNPIDs should be unique!")
+  
+  subjIDs_Null = obj_Null$subjIDs
+  subjPos = match(subjIDs_Null, subjIDs, 0)
+  if(any(subjPos==0))
+    stop("all subjucts in null model should be also in 'GMat'.")
+  
+  GMat = GMat[subjPos,]
+  
+  n = nrow(GMat);    # number of individuals
   m = ncol(GMat);
   
   if(missing(chrVec)){
@@ -252,47 +273,50 @@ POLMM = function(GMat,            # n x m matrix
     chrVec = rep("LOCO=F",m)
   }
   
-  
   if(length(chrVec)==1){
+    warning(paste0("Chromosome of all markers in analysis are ",chrVec,"."))
     chrVec = rep(chrVec, m)
   }else{
     if(length(chrVec)!=m)
-      stop("length of chrVec should be 1 or equals to ncol(GMat)!!")
+      stop("length of chrVec should be 1 or equal to ncol(GMat)!")
   }
   
   chrVecLOCO = names(obj_Null$LOCOList)
   if(any(!is.element(chrVec, chrVecLOCO)))
-    stop("all elements in chrVec should be in names(obj_Null$LOCOList)!!")
+    stop("all elements in chrVec should be from names(obj_Null$LOCOList)!")
   
   cat("Totally", m, "markers to analyze!!\n")
   
+  uniq_chr = unique(chrVec)
   OutMat = c()
-  for(i in 1:m){
-    GVec = GMat[,i]
-    SNPID = colnames(GMat)[i]
-    AF = mean(GVec)/2
-    MAF = ifelse(AF < 0.5, AF, 1-AF)
-    if(MAF < minMAF)
-      next
-    chr = chrVec[i]
+  for(chr in uniq_chr){
     r = obj_Null$LOCOList[[chr]]$VarRatio
     objP = obj_Null$LOCOList[[chr]]$objP
-    ## 
-    adjG = outputadjGFast(GVec, objP)
-    adjGMat = adjG$adjGMat
-    Stat = adjG$Stat
-    VarW = adjG$VarW
-    VarP = VarW * r
-    pval.norm = 2*pnorm(-1*abs(Stat)/sqrt(VarP), lower.tail=T)
-    if(pval.norm < 0.0455){  # spa-2 
-      pval.spa = Saddle_Prob(Stat, VarP, VarW,
-                             adjGMat, objP[["muMat"]], objP[["iRMat"]])   # n x (J-1)
-    }else{
-      pval.spa = pval.norm
+    pos = which(chrVec == uniq_chr)
+    for(i in pos){
+      GVec = GMat[,i]
+      SNPID = colnames(GMat)[i]
+      AF = mean(GVec)/2
+      MAF = ifelse(AF < 0.5, AF, 1-AF)
+      if(MAF < minMAF)
+        next
+      ## 
+      adjG = outputadjGFast(GVec, objP)
+      adjGMat = adjG$adjGMat
+      Stat = adjG$Stat
+      VarW = adjG$VarW
+      VarP = VarW * r
+      z = abs(Stat)/sqrt(VarP)
+      pval.spa = pval.norm = 2*pnorm(-1*z, lower.tail=T)
+      if(z > SPAcutoff){   
+        pval.spa = Saddle_Prob(Stat, VarP, VarW,
+                               adjGMat, objP[["muMat"]], objP[["iRMat"]])   # n x (J-1)
+      }
+      OutMat = rbind(OutMat,
+                     c(SNPID, chr, MAF, Stat, VarW, VarP, pval.norm, pval.spa))
     }
-    OutMat = rbind(OutMat,
-                   c(SNPID, chr, MAF, Stat, VarW, VarP, pval.norm, pval.spa))
   }
+  
   colnames(OutMat) = c("SNPID", "chr", "MAF", "Stat", "VarW", "VarP", "pval.norm", "pval.spa")
   return(OutMat)
 }

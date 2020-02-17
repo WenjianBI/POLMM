@@ -4,23 +4,25 @@
 \alias{POLMM}
 \title{Test for association between genotype and an ordinal categorical variable via Proportional Odds Logistic Mixed Model (POLMM)}
 \usage{
-POLMM(GMat, obj_Null, chrVec, minMAF)
+POLMM(GMat, obj_Null, chrVec, minMAF, SPAcutoff = 2)
 }
 \arguments{
-\item{GMat}{a numeric genotype matrix with each row as an individual and each column as a marker. Column names of marker IDs are required.}
+\item{GMat}{a numeric genotype matrix with each row as an individual and each column as a marker. Column names of marker IDs and row names of individual IDs are required.}
 
 \item{obj_Null}{an output object of the POLMM_Null_Model() function}
 
 \item{chrVec}{a character or character vector to specify chromosome(s) of the markers in GMat.}
 
 \item{minMAF}{a cutoff of the minimal minor allele frequencies (MAFs). Any markers with MAF < cutoff will be excluded from the analysis.}
+
+\item{SPAcutoff}{a standard deviation cutoff (default=2). If the test statistic lies within the standard deviation cutoff of the mean, p value based on traditional score test is returned. Otherwise, p value is calculated based on saddlepoint approximation.}
 }
 \value{
 an R matrix with the following elements
 \item{ID}{Marker IDs from colnames(GMat)}
 \item{MAF}{MAFs of the markers}
 \item{Stat}{Score statistics}
-\item{VarW}{Estimated variance (VarW) from non-mixed effect model}
+\item{VarW}{Estimated variance (VarW) from non-mixed model}
 \item{VarP}{Estimated variance after adjusting for variance ratio r (VarP = VarW * r)}
 \item{pval.norm}{p values calculated from normal approximation}
 \item{pval.spa}{p values calculated from saddlepoint approximation}
@@ -31,7 +33,7 @@ Test for association between genotype and an ordinal categorical variable via Pr
 \examples{
 ## We use a Plink file with 10,000 markers and 1,000 subjects to constract GRM for demonstration. 
 ## For real data analysis, we recommend >= 100,000 common markers (MAF > 0.05 or 0.01).
-## Selection of the common markers are similar as in Principle Components Analysis (PCA).
+## Selection of the common markers is similar as in Principle Components Analysis (PCA).
 famFile = system.file("extdata", "nSNPs-10000-nsubj-1000-ext.fam", package = "POLMM")
 PlinkFile = gsub("-ext.fam","-ext",famFile)
 dataFile = system.file("extdata", "POLMM_data.csv", package = "POLMM")
@@ -45,10 +47,11 @@ objNull = POLMM_Null_Model(as.factor(outcome)~Cova1+Cova2, data=egData, PlinkFil
 ## If control$seed is not changed, objNull$tau should be 0.705
 objNull$tau
 
-## when using SAIGE.POLMM, chrVec should be from
+## when using function POLMM(), argument chrVec should be from
 names(objNull$LOCOList)
 
 GMat = matrix(rbinom(10000,2,0.3),1000,10)
+rownames(GMat) = egData$IID
 colnames(GMat) = paste0("rs",1:10)
 outPOLMM = POLMM(GMat, objNull, "1", 0.001)
 }
