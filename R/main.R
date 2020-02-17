@@ -1,49 +1,56 @@
 
 #' Fit a Proportional Odds Logistic Mixed Model (POLMM) for ordinal categorical data analysis
 #' 
-#' Fit a POLMM to analyze ordinal categorical outcome. We use a random effect with a variance of Genetic Relationship Matrix (GRM) to adjust for sample relatedness.
-#' @param formula an object of class "formula": a symbolic description of the null model to be fitted
-#' @param data an optional data frame containing the variables in the model. If not specified, the variables are taken from 'environment(formula)'
-#' @param PlinkFile Path to plink file for creating the genetic relationship matrix (GRM).
-#' @param subjData an R vector to specify subject IDs in 'formula' and 'data'
-#' @param subjPlink an R vector to specify subject IDs in 'PlinkFile'
-#' @param GMatRatio an R matrix with raw genotype of multiple SNPs (e.g. 30 SNPs) to calculate Variance Ratio. Only required when control$LOCO=F. Note that it should be uncorrelated with SNPs in PlinkFile.
-#' @param control an R list with for controlling the fitting process. More details can be seen in 'Details' Section.
-#' @details More information about list of 'control'
+#' Fit a POLMM with a response varaible of ordinal categorical outcome. To adjust for sample relatedness, we use a random effect with a variance estiamted from Genetic Relationship Matrix (GRM).
+#' @param formula an object of class "formula" to be passed to function ordinal::clm(). 
+#' @param data an optional data frame containing the variables in the null model. If not specified, the variables are taken from 'environment(formula)'
+#' @param PlinkFile a path to Plink files for Genetic Relationship Matrix (GRM).
+#' @param subjData a character vector to specify subject IDs in 'formula' and 'data'.
+#' @param subjPlink a character vector to specify subject IDs in 'PlinkFile'.
+#' @param subjMatch a logical value to indicate if subjData is the same as subjPlink. If TRUE, 'subjData' and 'subjPlink' are not needed any more. Default is FALSE.
+#' @param GMatRatio only required if control$LOCO=F. a numeric matrix with genotype of multiple markers (>= 100 markers) to calculate variance ratio (r=VarP/VarW, see 'Details' Section). Each row is for one individual (the same order as subjData) and each column is for one marker. We recommand that these markers should be uncorrelated with the markers in PlinkFile.
+#' @param control a list of parameters for controlling the fitting process. More details can be seen in 'Details' Section.
+#' @details 
+#' Variance VarP should be used to calibrate p values. However, it is computational expensive to calculate VarP for all markers. Hence, we first estimate variance ratio r = VarP / VarW, and then calculate VarW for all markers and estimate VarP = VarW * r. 
+#' \itemize{
+#' \item{VarP: variance estimated from mixed effect model.}
+#' \item{VarW: variance estimated from non-mixed effect model.}
+#' }
+#' More information about the list of 'control'
 #' \itemize{
 #' \item{memoryChunk: Size (Gb) for each memory chunk when reading in Plink file [default=2].}
-#' \item{seed: A single integer value as random number seeds [default=12345678].}
-#' \item{tracenrun: A single integer value, initial number of runs for trace estimator [default=30].}
-#' \item{maxiter: A single integer value, maximum number of iterations used to fit the null POLMM [default=100].}
-#' \item{tolBeta: Tolerance for fixed effect coefficients to converge when fitting the null POLMM [default=0.01].}
-#' \item{tolTau: Tolerance for variance component (tau) of random effect to converge when fitting the null POLMM [default=0.02].}
-#' \item{tau: Initial values for variance component (tau) [default=0.5].}
-#' \item{maxiterPCG: Maximum number of iterations for PCG [default=100].}
-#' \item{tolPCG: Tolerance for PCG to converge [default=1e-5].}
+#' \item{seed: An integer as random seed [default=12345678].}
+#' \item{tracenrun: Number of runs for trace estimator [default=30].}
+#' \item{maxiter: Maximum number of iterations used to fit the null POLMM [default=100].}
+#' \item{tolBeta: Positive tolerance for fixed effect coefficients; the iterations converge when |beta - beta_old| / (|beta| + 0.1) < tolBeta [default=0.01].}
+#' \item{tolTau: Positive tolerance for random effect variance component (tau); the iterations converge when |tau - tau_old| / (|tau| + 0.1) < tolTau [default=0.02].}
+#' \item{tau: Initial value of variance component (tau) [default=0.5].}
+#' \item{maxiterPCG: Maximum number of iterations for PCG to converge [default=100].}
+#' \item{tolPCG: Positive tolerance for PCG to converge [default=1e-5].}
 #' \item{maxiterEps: Maximum number of iterations for cutpoints estimation [default=100].}
-#' \item{tolEps: Tolerance for cutpoints estimation to converge [default=1e-5].}
-#' \item{minMafVarRatio: MAF cutoff to select SNPs for variance ratio estimation [default=0.1].}
-#' \item{nSNPsVarRatio: Initial number of markers to be randomly selected for variance ratio estimation [default=30], the number will be automatically added by 10 untial the coefficient of variantion (CV) for the variance ratio estimate is below CVcutoff.}
-#' \item{CVcutoff: coefficient of variantion (CV) cutoff for variance ratio estimation [default=0.0025].}
+#' \item{tolEps: Positive tolerance for cutpoints estimation to converge [default=1e-5].}
+#' \item{minMafVarRatio: Minimal value of MAF cutoff to select markers (from Plink file) to estimate variance ratio [default=0.1].}
+#' \item{nSNPsVarRatio: Initial number of selected markers to estimate variance ratio [default=30], the number will be automatically added by 10 until the coefficient of variantion (CV) of the variance ratio estimate is below CVcutoff.}
+#' \item{CVcutoff: Minimal cutoff of coefficient of variantion (CV) for variance ratio estimation [default=0.0025].}
 #' \item{LOCO: Whether to apply the leave-one-chromosome-out (LOCO) approach, if FALSE, 'GMatRatio' is required [default=TRUE].}
 #' }
-#' @example check help(SAIGE.POLMM) for one example.
-#' @return an R object of 'POLMM_NULL' with the following elements
+#' @examples check help(POLMM) for an example.
+#' @return an R object of 'POLMM_NULL' with the following elements, J is number of categories.
 #' \item{N}{Number of individuals in analysis.}
-#' \item{M}{Number of markers in Plink file for GRM construction.}
-#' \item{Cova}{Stacked matrix (N(J-1) x p) of covariates, p is number of covariates.}
-#' \item{beta}{fixed effect parameters for covariates.}
-#' \item{tau}{variance component. NOTE: usually underestimated due to Penalized Quasi-likelihood.}
-#' \item{bVec}{random effect for sample relatedness}
-#' \item{eps}{cutpoints for different categories}
-#' \item{eta}{linear predicator}
-#' \item{yVec}{Matrix (N x J) to indicate the ordinal categorical phenotypes, J is number of categories.}
-#' \item{muMat}{Matrix (N x J), probability in each category for all individuals.}
-#' \item{YMat}{Matrix (N x (J-1)), working variable in each category for all individuals.}
+#' \item{M}{Number of markers in Plink file.}
+#' \item{Cova}{A stacked matrix (N(J-1) x p) of covariates; p is number of covariates.}
+#' \item{beta}{Fixed effect: estimated parameters for covariates.}
+#' \item{tau}{Variance component. NOTE: usually underestimated due to Penalized Quasi-Likelihood (PQL).}
+#' \item{bVec}{Random effect: estimated to characterize sample relatedness}
+#' \item{eps}{Cutpoints for different categories}
+#' \item{eta}{Linear predicators for all individuals}
+#' \item{yVec}{A matrix (N x J) to indicate the categorical phenotypes.}
+#' \item{muMat}{A matrix (N x J), probability in each category.}
+#' \item{YMat}{A matrix (N x (J-1)), working variable in each category.}
 #' \item{LOCOList}{Objects for Step 2 calculation. Might be large if sample size is large and number of chromosomes is large. For example, when analyzing UK Biobank with xx individuals and xx chromosomes, this object is xx Gb.}
-#' \item{controlList}{List of control arguments. More details about control can be seen in 'Details' Section.}
-#' \item{version}{Current version of POLMM package}
-#' \item{time}{Time when finish fitting null model fitting}
+#' \item{controlList}{List of control arguments. More details can be seen in 'Details' Section.}
+#' \item{sessionInfo}{Information of R session when analysis}
+#' \item{time}{Time when null model fitting is finished}
 POLMM_Null_Model = function(formula,
                             data,
                             PlinkFile,
@@ -54,25 +61,27 @@ POLMM_Null_Model = function(formula,
                             control)
 {
   if(missing(PlinkFile))
-    stop("Argument 'PlinkFile' is needed to specify the plink file for GRM.\n
-         Note that bed, bim and fim files should be at the same directory with the same prefix.")
+    stop("Argument 'PlinkFile' is needed to specify the path to Plink binary files.\n
+         Note that bed, bim and fim files should be of the same prefix and at the same directory.")
   if(missing(control)){
-    warning("No argument 'control' is given, The default setting of 'control' will be used!")
+    warning("The default setting of 'control' will be used.")
     control = NULL;
   }
+  
+  ## run ordinal::clm for initial value (author version: 2019.4-25)
   if(missing(data)){
     obj.clm = summary(ordinal::clm(formula))
   }else{
     obj.clm = summary(ordinal::clm(formula, data = data))
   }
   
-  ## run ordinal::clm for initial value (ordinal package version: 2019.4-25)
   if(anyNA(obj.clm$beta))
     stop("Please check collinearity between covariates! Note that intercept term should not be explicitly incorporated.")
   if(length(obj.clm$alpha)==1)
-    stop("Number of outcome levels should be >= 3.")
+    stop("Number of response levels should be >= 3.")
   
-  beta = c(-1 * obj.clm$alpha[1], obj.clm$beta)   # incorporate an intercept and then fix the first eps as 0
+  # incorporate an intercept and then fix the first eps as 0
+  beta = c(-1 * obj.clm$alpha[1], obj.clm$beta)   
   eps = c(0, obj.clm$alpha[-1] - obj.clm$alpha[1])
   
   ## read in data
@@ -92,15 +101,15 @@ POLMM_Null_Model = function(formula,
            If these two are of the same order, you can use 'subjMatch=T' instead.")
     }else{
       posSampleInPlink = match(subjData, subjPlink, 0)
-      if(any(posSampleInPlink==0))
-        stop("All elements in subjData should be in subjPlink")
-      if(length(posSampleInPlink)!=n)
-        stop("length of subjData should be the same with input data. Note that currently, we do not support NA input.")
+      if(any(posSampleInPlink == 0))
+        stop("All individuals in 'subjData' should be also in 'subjPlink'")
+      if(length(posSampleInPlink) != n)
+        stop("length of 'subjData' should be the same with input data. Note that currently, we do not support missing input.")
     }
   }
   
   # usually the following conditions will not happen
-  if(colnames(Cova)[1]!="(Intercept)")
+  if(colnames(Cova)[1] != "(Intercept)")
     stop("colnames(Cova)[1] should be (intercept)!!")
   if(any(colnames(Cova)[-1] != names(obj.clm$beta)))
     stop("colnames(Cova)[-1] should be the same as names(obj.clm$beta)")
@@ -109,9 +118,9 @@ POLMM_Null_Model = function(formula,
   if(control$LOCO == FALSE)
   {
     if(missing(GMatRatio))
-      stop("Default setting is to use LOCO (Leave One Chromosome Out), if you choose to set LOCO=F, then you have to give a matrix of GMatRatio to estimate the variance ratio r.")
+      stop("Default setting is to use Leave One Chromosome Out (control$LOCO=TRUE). If you set control$LOCO=FALSE, then you have to give a GMatRatio to estimate variance ratio r.")
     if(nrow(GMatRatio)!=n)
-      stop("nrow(GMatRatio) should equal to the sample size.")
+      stop("nrow(GMatRatio) should == sample size.")
     if(ncol(GMatRatio)<100)
       stop("ncol(GMatRatio) should be >= 100.")
   }else{
@@ -131,7 +140,7 @@ POLMM_Null_Model = function(formula,
                         GMatRatioR = GMatRatio,
                         controlListR = control)
   
-  obj_Null$version = "v0.1.0"
+  obj_Null$sessionInfo = sessionInfo()
   obj_Null$time = Sys.time()
   
   class(obj_Null) = "POLMM_NULL"
@@ -191,21 +200,22 @@ updateCtrl = function(control.new){
 #' Test for association between genotype and an ordinal categorical variable via Proportional Odds Logistic Mixed Model (POLMM)
 #' 
 #' Test for association between genotype and an ordinal categorical variable via Proportional Odds Logistic Mixed Model (POLMM)
-#' @param GMat a numeric genotype matrix with each row as an individual and each column as a marker. Column names is required
-#' @param obj_Null output object of function FitNull
-#' @param chrVec a character or vector to specify the markers chromosome
-#' @param minMAF lower cutoff of genetic variants minor allele frequencies (MAFs) for analysis.
+#' @param GMat a numeric genotype matrix with each row as an individual and each column as a marker. Column names of marker IDs are required.
+#' @param obj_Null an output object of the POLMM_Null_Model() function 
+#' @param chrVec a character or character vector to specify chromosome(s) of the markers in GMat.
+#' @param minMAF a cutoff of the minimal minor allele frequencies (MAFs). Any markers with MAF < cutoff will be excluded from the analysis.
 #' @return an R matrix with the following elements
-#' \item{SNPID}{SNP IDs from colnames(GMat)}
-#' \item{MAF}{Minor allele frequencies}
+#' \item{ID}{Marker IDs from colnames(GMat)}
+#' \item{MAF}{MAFs of the markers}
 #' \item{Stat}{Score statistics}
-#' \item{VarW}{Estimated variance (VarW) from non mixed effect model}
+#' \item{VarW}{Estimated variance (VarW) from non-mixed effect model}
 #' \item{VarP}{Estimated variance after adjusting for variance ratio r (VarP = VarW * r)}
 #' \item{pval.norm}{p values calculated from normal approximation}
 #' \item{pval.spa}{p values calculated from saddlepoint approximation}
 #' @examples 
-#' ## The example files use plink files with 10000 markers and 1000 subjects. 
-#' ## For real data analysis, we recommend >= 100000 markers.
+#' ## We use a Plink file with 10,000 markers and 1,000 subjects to constract GRM for demonstration. 
+#' ## For real data analysis, we recommend >= 100,000 common markers (MAF > 0.05 or 0.01).
+#' ## Selection of the common markers are similar as in Principle Components Analysis (PCA).
 #' famFile = system.file("extdata", "nSNPs-10000-nsubj-1000-ext.fam", package = "POLMM")
 #' PlinkFile = gsub("-ext.fam","-ext",famFile)
 #' dataFile = system.file("extdata", "POLMM_data.csv", package = "POLMM")

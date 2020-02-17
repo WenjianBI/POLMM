@@ -7,20 +7,20 @@
 POLMM(GMat, obj_Null, chrVec, minMAF)
 }
 \arguments{
-\item{GMat}{a numeric genotype matrix with each row as an individual and each column as a marker. Column names is required}
+\item{GMat}{a numeric genotype matrix with each row as an individual and each column as a marker. Column names of marker IDs are required.}
 
-\item{obj_Null}{output object of function FitNull}
+\item{obj_Null}{an output object of the POLMM_Null_Model() function}
 
-\item{chrVec}{a character or vector to specify the markers chromosome}
+\item{chrVec}{a character or character vector to specify chromosome(s) of the markers in GMat.}
 
-\item{minMAF}{lower cutoff of genetic variants minor allele frequencies (MAFs) for analysis.}
+\item{minMAF}{a cutoff of the minimal minor allele frequencies (MAFs). Any markers with MAF < cutoff will be excluded from the analysis.}
 }
 \value{
 an R matrix with the following elements
-\item{SNPID}{SNP IDs from colnames(GMat)}
-\item{MAF}{Minor allele frequencies}
+\item{ID}{Marker IDs from colnames(GMat)}
+\item{MAF}{MAFs of the markers}
 \item{Stat}{Score statistics}
-\item{VarW}{Estimated variance (VarW) from non mixed effect model}
+\item{VarW}{Estimated variance (VarW) from non-mixed effect model}
 \item{VarP}{Estimated variance after adjusting for variance ratio r (VarP = VarW * r)}
 \item{pval.norm}{p values calculated from normal approximation}
 \item{pval.spa}{p values calculated from saddlepoint approximation}
@@ -29,8 +29,9 @@ an R matrix with the following elements
 Test for association between genotype and an ordinal categorical variable via Proportional Odds Logistic Mixed Model (POLMM)
 }
 \examples{
-## The example files use plink files with 10000 markers and 1000 subjects. 
-## For real data analysis, we recommend >= 100000 markers.
+## We use a Plink file with 10,000 markers and 1,000 subjects to constract GRM for demonstration. 
+## For real data analysis, we recommend >= 100,000 common markers (MAF > 0.05 or 0.01).
+## Selection of the common markers are similar as in Principle Components Analysis (PCA).
 famFile = system.file("extdata", "nSNPs-10000-nsubj-1000-ext.fam", package = "POLMM")
 PlinkFile = gsub("-ext.fam","-ext",famFile)
 dataFile = system.file("extdata", "POLMM_data.csv", package = "POLMM")

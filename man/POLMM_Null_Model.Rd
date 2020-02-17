@@ -8,58 +8,68 @@ POLMM_Null_Model(formula, data, PlinkFile, subjData, subjPlink,
   subjMatch = FALSE, GMatRatio, control)
 }
 \arguments{
-\item{formula}{an object of class "formula": a symbolic description of the null model to be fitted}
+\item{formula}{an object of class "formula" to be passed to function ordinal::clm().}
 
-\item{data}{an optional data frame containing the variables in the model. If not specified, the variables are taken from 'environment(formula)'}
+\item{data}{an optional data frame containing the variables in the null model. If not specified, the variables are taken from 'environment(formula)'}
 
-\item{PlinkFile}{Path to plink file for creating the genetic relationship matrix (GRM).}
+\item{PlinkFile}{a path to Plink files for Genetic Relationship Matrix (GRM).}
 
-\item{subjData}{an R vector to specify subject IDs in 'formula' and 'data'}
+\item{subjData}{a character vector to specify subject IDs in 'formula' and 'data'.}
 
-\item{subjPlink}{an R vector to specify subject IDs in 'PlinkFile'}
+\item{subjPlink}{a character vector to specify subject IDs in 'PlinkFile'.}
 
-\item{GMatRatio}{an R matrix with raw genotype of multiple SNPs (e.g. 30 SNPs) to calculate Variance Ratio. Only required when control$LOCO=F. Note that it should be uncorrelated with SNPs in PlinkFile.}
+\item{subjMatch}{a logical value to indicate if subjData is the same as subjPlink. If TRUE, 'subjData' and 'subjPlink' are not needed any more. Default is FALSE.}
 
-\item{control}{an R list with for controlling the fitting process. More details can be seen in 'Details' Section.}
+\item{GMatRatio}{only required if control$LOCO=F. a numeric matrix with genotype of multiple markers (>= 100 markers) to calculate variance ratio (r=VarP/VarW, see 'Details' Section). Each row is for one individual (the same order as subjData) and each column is for one marker. We recommand that these markers should be uncorrelated with the markers in PlinkFile.}
+
+\item{control}{a list of parameters for controlling the fitting process. More details can be seen in 'Details' Section.}
 }
 \value{
-an R object of 'POLMM_NULL' with the following elements
+an R object of 'POLMM_NULL' with the following elements, J is number of categories.
 \item{N}{Number of individuals in analysis.}
-\item{M}{Number of markers in Plink file for GRM construction.}
-\item{Cova}{Stacked matrix (N(J-1) x p) of covariates, p is number of covariates.}
-\item{beta}{fixed effect parameters for covariates.}
-\item{tau}{variance component. NOTE: usually underestimated due to Penalized Quasi-likelihood.}
-\item{bVec}{random effect for sample relatedness}
-\item{eps}{cutpoints for different categories}
-\item{eta}{linear predicator}
-\item{yVec}{Matrix (N x J) to indicate the ordinal categorical phenotypes, J is number of categories.}
-\item{muMat}{Matrix (N x J), probability in each category for all individuals.}
-\item{YMat}{Matrix (N x (J-1)), working variable in each category for all individuals.}
+\item{M}{Number of markers in Plink file.}
+\item{Cova}{A stacked matrix (N(J-1) x p) of covariates; p is number of covariates.}
+\item{beta}{Fixed effect: estimated parameters for covariates.}
+\item{tau}{Variance component. NOTE: usually underestimated due to Penalized Quasi-Likelihood (PQL).}
+\item{bVec}{Random effect: estimated to characterize sample relatedness}
+\item{eps}{Cutpoints for different categories}
+\item{eta}{Linear predicators for all individuals}
+\item{yVec}{A matrix (N x J) to indicate the categorical phenotypes.}
+\item{muMat}{A matrix (N x J), probability in each category.}
+\item{YMat}{A matrix (N x (J-1)), working variable in each category.}
 \item{LOCOList}{Objects for Step 2 calculation. Might be large if sample size is large and number of chromosomes is large. For example, when analyzing UK Biobank with xx individuals and xx chromosomes, this object is xx Gb.}
-\item{controlList}{List of control arguments. More details about control can be seen in 'Details' Section.}
-\item{version}{Current version of POLMM package}
-\item{time}{Time when finish fitting null model fitting}
+\item{controlList}{List of control arguments. More details can be seen in 'Details' Section.}
+\item{sessionInfo}{Information of R session when analysis}
+\item{time}{Time when null model fitting is finished}
 }
 \description{
-Fit a POLMM to analyze ordinal categorical outcome. We use a random effect with a variance of Genetic Relationship Matrix (GRM) to adjust for sample relatedness.
+Fit a POLMM with a response varaible of ordinal categorical outcome. To adjust for sample relatedness, we use a random effect with a variance estiamted from Genetic Relationship Matrix (GRM).
 }
 \details{
-More information about list of 'control'
+Variance VarP should be used to calibrate p values. However, it is computational expensive to calculate VarP for all markers. Hence, we first estimate variance ratio r = VarP / VarW, and then calculate VarW for all markers and estimate VarP = VarW * r. 
+\itemize{
+\item{VarP: variance estimated from mixed effect model.}
+\item{VarW: variance estimated from non-mixed effect model.}
+}
+More information about the list of 'control'
 \itemize{
 \item{memoryChunk: Size (Gb) for each memory chunk when reading in Plink file [default=2].}
-\item{seed: A single integer value as random number seeds [default=12345678].}
-\item{tracenrun: A single integer value, initial number of runs for trace estimator [default=30].}
-\item{maxiter: A single integer value, maximum number of iterations used to fit the null POLMM [default=100].}
-\item{tolBeta: Tolerance for fixed effect coefficients to converge when fitting the null POLMM [default=0.01].}
-\item{tolTau: Tolerance for variance component (tau) of random effect to converge when fitting the null POLMM [default=0.02].}
-\item{tau: Initial values for variance component (tau) [default=0.5].}
-\item{maxiterPCG: Maximum number of iterations for PCG [default=100].}
-\item{tolPCG: Tolerance for PCG to converge [default=1e-5].}
+\item{seed: An integer as random seed [default=12345678].}
+\item{tracenrun: Number of runs for trace estimator [default=30].}
+\item{maxiter: Maximum number of iterations used to fit the null POLMM [default=100].}
+\item{tolBeta: Positive tolerance for fixed effect coefficients; the iterations converge when |beta - beta_old| / (|beta| + 0.1) < tolBeta [default=0.01].}
+\item{tolTau: Positive tolerance for random effect variance component (tau); the iterations converge when |tau - tau_old| / (|tau| + 0.1) < tolTau [default=0.02].}
+\item{tau: Initial value of variance component (tau) [default=0.5].}
+\item{maxiterPCG: Maximum number of iterations for PCG to converge [default=100].}
+\item{tolPCG: Positive tolerance for PCG to converge [default=1e-5].}
 \item{maxiterEps: Maximum number of iterations for cutpoints estimation [default=100].}
-\item{tolEps: Tolerance for cutpoints estimation to converge [default=1e-5].}
-\item{minMafVarRatio: MAF cutoff to select SNPs for variance ratio estimation [default=0.1].}
-\item{nSNPsVarRatio: Initial number of markers to be randomly selected for variance ratio estimation [default=30], the number will be automatically added by 10 untial the coefficient of variantion (CV) for the variance ratio estimate is below CVcutoff.}
-\item{CVcutoff: coefficient of variantion (CV) cutoff for variance ratio estimation [default=0.0025].}
+\item{tolEps: Positive tolerance for cutpoints estimation to converge [default=1e-5].}
+\item{minMafVarRatio: Minimal value of MAF cutoff to select markers (from Plink file) to estimate variance ratio [default=0.1].}
+\item{nSNPsVarRatio: Initial number of selected markers to estimate variance ratio [default=30], the number will be automatically added by 10 until the coefficient of variantion (CV) of the variance ratio estimate is below CVcutoff.}
+\item{CVcutoff: Minimal cutoff of coefficient of variantion (CV) for variance ratio estimation [default=0.0025].}
 \item{LOCO: Whether to apply the leave-one-chromosome-out (LOCO) approach, if FALSE, 'GMatRatio' is required [default=TRUE].}
 }
+}
+\examples{
+check help(POLMM) for an example.
 }
