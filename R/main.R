@@ -254,7 +254,7 @@ POLMM = function(GMat,            # n x m matrix
   
   if(is.null(subjIDs) | is.null(SNPIDs))
     stop("rownames and colnames of GMat are required!")
-  if(anyDuplicated(subjIDs) | anyDuplicated(SNPIDs))
+  if(any(duplicated(subjIDs)) | any(duplicated(SNPIDs)))
     stop("all elements of either subjIDs or SNPIDs should be unique!")
   
   subjIDs_Null = obj_Null$subjIDs
