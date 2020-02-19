@@ -569,6 +569,40 @@ Rcpp::List outputadjGFast(arma::vec GVec,
   return(outList);
 }
 
+// [[Rcpp::export]]
+arma::cube getRPsiR_v1(arma::mat muMat,
+                       arma::mat iRMat,
+                       int n, int J)
+{
+  arma::cube RPsiR(J-1, J-1, n, arma::fill::zeros);
+  arma::mat muRMat = muMat.cols(0, J-2) / iRMat;
+  for(int i = 0; i < n; i++){
+    for(int j1 = 0; j1 < J-1; j1++){
+      RPsiR(j1,j1,i) += muRMat(i,j1) / iRMat(i,j1) - muRMat(i,j1) * muRMat(i,j1);
+      for(int j2 = j1+1; j2 < J-1; j2++){
+        RPsiR(j1,j2,i) -= muRMat(i,j1) * muRMat(i,j2);
+        // RPsiR(j2,j1,i) -= muRMat(i,j1) * muRMat(i,j2); // v4.1: RPsiR is only used in function getVarWFast, 
+      }
+    }
+  }
+  return(RPsiR);
+}
+
+// [[Rcpp::export]]
+Rcpp::List outputadjGFast_v1(arma::vec GVec,
+                             Rcpp::List objP,
+                             arma::cube RPsiR)
+{
+  arma::mat adjGMat = getadjGFast(GVec, objP["XXR_Psi_RX"], objP["XR_Psi_R_new"], objP["n"], objP["J"], objP["p"]);
+  double Stat = getStatFast(GVec, objP["RymuMat"], objP["n"], objP["J"]);
+  double VarW = getVarWFast(adjGMat, RPsiR, objP["n"], objP["J"]);
+  
+  Rcpp::List outList = List::create(Named("adjGMat")=adjGMat,
+                                    Named("Stat")=Stat,           
+                                    Named("VarW")=VarW);
+  
+  return(outList);
+}
 
 class nullModelClass
 {
@@ -632,6 +666,7 @@ private:
   Rcpp::List getLOCO(string, std::vector<int>);
   arma::mat getVarRatio(std::vector<int>, string, Rcpp::List);
   arma::rowvec getVarOneSNP(arma::vec, string, Rcpp::List);
+  arma::rowvec getVarOneSNP_v1(arma::vec, string, Rcpp::List, arma::cube);
   double getVarP(arma::mat, string);
   Rcpp::List getobjP();
   void getRPsiR(arma::cube&);
@@ -739,7 +774,7 @@ void nullModelClass::getRPsiR(arma::cube& RPsiR)   // (J-1) x (J-1) x n
 Rcpp::List nullModelClass::getobjP()
 {
   // output for Step 2
-  arma::mat XR_Psi_R(p, n*(J-1));
+  arma::mat XR_Psi_R(p, n*(J-1));       // p x n(J-1)
   arma::mat xMat(n, J-1);
   arma::vec temp(n*(J-1));
   for(int k = 0; k < p; k++){
@@ -747,11 +782,11 @@ Rcpp::List nullModelClass::getobjP()
     temp = convert1(getPsixMat(xMat / iRMat) / iRMat);
     XR_Psi_R.row(k) = temp.t();
   }
-  arma::mat XXR_Psi_RX = CovaMat * inv(XR_Psi_R * CovaMat);
+  arma::mat XXR_Psi_RX = CovaMat * inv(XR_Psi_R * CovaMat);             // n(J-1) x p
   iSigmaX_XSigmaX = iSigma_CovaMat * inv(CovaMat.t() * iSigma_CovaMat);
   
-  arma::cube RPsiR(J-1, J-1, n, arma::fill::zeros);
-  getRPsiR(RPsiR);
+  // arma::cube RPsiR(J-1, J-1, n, arma::fill::zeros);
+  // getRPsiR(RPsiR);
   
   arma::mat XR_Psi_R_new(p, n, arma::fill::zeros);  // p x n
   int index = 0;
@@ -769,7 +804,7 @@ Rcpp::List nullModelClass::getobjP()
                                  Named("J")=J,
                                  Named("p")=p,
                                  Named("XXR_Psi_RX")=XXR_Psi_RX,
-                                 Named("RPsiR")=RPsiR,
+                                 // Named("RPsiR")=RPsiR,
                                  Named("XR_Psi_R_new")=XR_Psi_R_new,           
                                  Named("RymuMat")=RymuMat,
                                  Named("muMat")=muMat,
@@ -798,6 +833,30 @@ arma::rowvec nullModelClass::getVarOneSNP(arma::vec GVec,
     AF = 1 - AF;
   
   Rcpp::List adjGList = outputadjGFast(GVec, objP);
+  arma::mat adjGMat = adjGList["adjGMat"];
+  double Stat = adjGList["Stat"];
+  double VarW = adjGList["VarW"];
+  double VarP = getVarP(adjGMat, excludechr);
+  
+  VarOut(0) = AF;
+  VarOut(1) = Stat;
+  VarOut(2) = VarW;
+  VarOut(3) = VarP;
+  VarOut(4) = VarP/VarW;
+  return(VarOut);
+}
+
+arma::rowvec nullModelClass::getVarOneSNP_v1(arma::vec GVec,
+                                             string excludechr,
+                                             Rcpp::List objP,
+                                             arma::cube RPsiR)
+{
+  arma::rowvec VarOut(5);
+  double AF = sum(GVec) / GVec.size() / 2;
+  if(AF > 0.5)
+    AF = 1 - AF;
+  
+  Rcpp::List adjGList = outputadjGFast_v1(GVec, objP, RPsiR);
   arma::mat adjGMat = adjGList["adjGMat"];
   double Stat = adjGList["Stat"];
   double VarW = adjGList["VarW"];
@@ -869,6 +928,7 @@ arma::mat nullModelClass::getVarRatio(std::vector<int> indexSNPs,
   arma::mat newVarRatio(10, 5);
   
   // Rcpp::List adjGList = outputadjGFast(GVec, objP);
+  arma::cube RPsiR = getRPsiR_v1(objP["muMat"], objP["iRMat"], objP["n"], objP["J"]);
   
   int index = 0;
   int indexTot = 0;
@@ -877,7 +937,8 @@ arma::mat nullModelClass::getVarRatio(std::vector<int> indexSNPs,
     indexTot++;
     if(alleleFreqVec(m) > minMafVarRatio && alleleFreqVec(m) < 1-minMafVarRatio){
       ptrGeno->getOneMarker(m, 0, &GVec);
-      VarOneSNP = getVarOneSNP(GVec, excludechr, objP);
+      // VarOneSNP = getVarOneSNP(GVec, excludechr, objP);
+      VarOneSNP = getVarOneSNP_v1(GVec, excludechr, objP, RPsiR);
       VarRatioMat.row(index) = VarOneSNP;
       index++;
     }
@@ -895,7 +956,8 @@ arma::mat nullModelClass::getVarRatio(std::vector<int> indexSNPs,
       indexTot++;
       if(alleleFreqVec(m) > minMafVarRatio && alleleFreqVec(m) < 1-minMafVarRatio){
         ptrGeno->getOneMarker(m, 0, &GVec);
-        VarOneSNP = getVarOneSNP(GVec, excludechr, objP);
+        // VarOneSNP = getVarOneSNP(GVec, excludechr, objP);
+        VarOneSNP = getVarOneSNP_v1(GVec, excludechr, objP, RPsiR);
         newVarRatio.row(indexTemp) = VarOneSNP;
         index++;
         indexTemp++;

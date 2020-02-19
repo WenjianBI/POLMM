@@ -47,11 +47,18 @@ objNull = POLMM_Null_Model(as.factor(outcome)~Cova1+Cova2, data=egData, PlinkFil
 ## If control$seed is not changed, objNull$tau should be 0.705
 objNull$tau
 
+obj
+  
 ## when using function POLMM(), argument chrVec should be from
 names(objNull$LOCOList)
 
+set.seed(123)
 GMat = matrix(rbinom(10000,2,0.3),1000,10)
 rownames(GMat) = egData$IID
 colnames(GMat) = paste0("rs",1:10)
 outPOLMM = POLMM(GMat, objNull, "1", 0.001)
+
+head(outPOLMM)
+round(as.numeric(outPOLMM$pval.spa),2)
+0.90 0.47 0.83 0.71 0.34 0.30 0.20 0.82 0.25 0.71
 }

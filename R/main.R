@@ -232,14 +232,22 @@ updateCtrl = function(control.new){
 #' 
 #' ## If control$seed is not changed, objNull$tau should be 0.705
 #' objNull$tau
-#' 
+#'
+#' obj
+#'   
 #' ## when using function POLMM(), argument chrVec should be from
 #' names(objNull$LOCOList)
 #' 
+#' set.seed(123)
 #' GMat = matrix(rbinom(10000,2,0.3),1000,10)
 #' rownames(GMat) = egData$IID
 #' colnames(GMat) = paste0("rs",1:10)
 #' outPOLMM = POLMM(GMat, objNull, "1", 0.001)
+#' 
+#' head(outPOLMM)
+#' round(as.numeric(outPOLMM$pval.spa),2)
+#' 0.90 0.47 0.83 0.71 0.34 0.30 0.20 0.82 0.25 0.71
+
 POLMM = function(GMat,            # n x m matrix
                  obj_Null,
                  chrVec,
@@ -293,6 +301,7 @@ POLMM = function(GMat,            # n x m matrix
     r = obj_Null$LOCOList[[chr]]$VarRatio
     objP = obj_Null$LOCOList[[chr]]$objP
     pos = which(chrVec == uniq_chr)
+    RPsiR = getRPsiR_v1(objP[["muMat"]], objP[["iRMat"]], objP[["n"]], objP[["J"]])
     for(i in pos){
       GVec = GMat[,i]
       SNPID = colnames(GMat)[i]
@@ -301,7 +310,7 @@ POLMM = function(GMat,            # n x m matrix
       if(MAF < minMAF)
         next
       ## 
-      adjG = outputadjGFast(GVec, objP)
+      adjG = outputadjGFast_v1(GVec, objP, RPsiR)
       adjGMat = adjG$adjGMat
       Stat = adjG$Stat
       VarW = adjG$VarW
@@ -318,6 +327,7 @@ POLMM = function(GMat,            # n x m matrix
   }
   
   colnames(OutMat) = c("SNPID", "chr", "MAF", "Stat", "VarW", "VarP", "pval.norm", "pval.spa")
+  OutMat = as.data.frame(OutMat, stringsAsFactors=F)
   return(OutMat)
 }
 
@@ -402,10 +412,11 @@ getroot_K1 = function(Stat,
     K2_eval = K2(t, muMat, cMat)
     
     diff.t = -1 * K1_eval / K2_eval
-    if(is.na(K1_eval)){
+    if(is.na(K1_eval)){   # check later for more details
       converge = F
-      break
+      break;
     }
+    
     if(sign(K1_eval)!=sign(old.K1)){
       while(abs(diff.t) > abs(old.diff.t) - tol){
         diff.t = diff.t/2

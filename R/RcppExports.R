@@ -5,6 +5,14 @@ outputadjGFast <- function(GVec, objP) {
     .Call(`_POLMM_outputadjGFast`, GVec, objP)
 }
 
+getRPsiR_v1 <- function(muMat, iRMat, n, J) {
+    .Call(`_POLMM_getRPsiR_v1`, muMat, iRMat, n, J)
+}
+
+outputadjGFast_v1 <- function(GVec, objP, RPsiR) {
+    .Call(`_POLMM_outputadjGFast_v1`, GVec, objP, RPsiR)
+}
+
 fitNullcpp <- function(Plink, posSampleInPlink, CovaR, yVecR, betaR, bVecR, epsR, tauR, GMatRatioR, controlListR) {
     .Call(`_POLMM_fitNullcpp`, Plink, posSampleInPlink, CovaR, yVecR, betaR, bVecR, epsR, tauR, GMatRatioR, controlListR)
 }
