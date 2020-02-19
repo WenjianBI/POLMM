@@ -391,6 +391,7 @@ getroot_K1 = function(Stat,
   t = init.t;
   K1_eval = 0
   diff.t = Inf
+  converge = T
   
   for(iter in 1:maxiter){
     old.t = t
@@ -401,6 +402,10 @@ getroot_K1 = function(Stat,
     K2_eval = K2(t, muMat, cMat)
     
     diff.t = -1 * K1_eval / K2_eval
+    if(is.na(K1_eval)){
+      converge = F
+      break
+    }
     if(sign(K1_eval)!=sign(old.K1)){
       while(abs(diff.t) > abs(old.diff.t) - tol){
         diff.t = diff.t/2
@@ -412,7 +417,6 @@ getroot_K1 = function(Stat,
   }
   
   if(iter == maxiter) converge = F
-  else converge = T
   
   return(list(root = t,
               iter = iter,
