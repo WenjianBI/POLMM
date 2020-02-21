@@ -22,19 +22,42 @@
 #' \item{seed: An integer as random seed [default=12345678].}
 #' \item{tracenrun: Number of runs for trace estimator [default=30].}
 #' \item{maxiter: Maximum number of iterations used to fit the null POLMM [default=100].}
-#' \item{tolBeta: Positive tolerance for fixed effect coefficients; the iterations converge when |beta - beta_old| / (|beta| + 0.1) < tolBeta [default=0.01].}
-#' \item{tolTau: Positive tolerance for random effect variance component (tau); the iterations converge when |tau - tau_old| / (|tau| + 0.1) < tolTau [default=0.02].}
+#' \item{tolBeta: Positive tolerance for fixed effect coefficients; the iterations converge when |beta - beta_old| / (|beta| + |beta_old| + tolBeta) < tolBeta [default=0.001].}
+#' \item{tolTau: Positive tolerance for random effect variance component (tau); the iterations converge when |tau - tau_old| / (|tau| + |tau_old| + tolTau) < tolTau [default=0.002].}
 #' \item{tau: Initial value of variance component (tau) [default=0.5].}
 #' \item{maxiterPCG: Maximum number of iterations for PCG to converge [default=100].}
 #' \item{tolPCG: Positive tolerance for PCG to converge [default=1e-5].}
 #' \item{maxiterEps: Maximum number of iterations for cutpoints estimation [default=100].}
 #' \item{tolEps: Positive tolerance for cutpoints estimation to converge [default=1e-5].}
 #' \item{minMafVarRatio: Minimal value of MAF cutoff to select markers (from Plink file) to estimate variance ratio [default=0.1].}
-#' \item{nSNPsVarRatio: Initial number of selected markers to estimate variance ratio [default=30], the number will be automatically added by 10 until the coefficient of variantion (CV) of the variance ratio estimate is below CVcutoff.}
+#' \item{nSNPsVarRatio: Initial number of selected markers to estimate variance ratio [default=20], the number will be automatically added by 10 until the coefficient of variantion (CV) of the variance ratio estimate is below CVcutoff.}
 #' \item{CVcutoff: Minimal cutoff of coefficient of variantion (CV) for variance ratio estimation [default=0.0025].}
 #' \item{LOCO: Whether to apply the leave-one-chromosome-out (LOCO) approach, if FALSE, 'GMatRatio' is required [default=TRUE].}
 #' }
-#' @examples check help(POLMM) for an example.
+#' @examples 
+#' #' ## We use a Plink file with 10,000 markers and 1,000 subjects to constract GRM for demonstration. 
+#' ## For real data analysis, we recommend >= 100,000 common markers (MAF > 0.05 or 0.01).
+#' ## Selection of the common markers is similar as in Principle Components Analysis (PCA).
+#' famFile = system.file("extdata", "nSNPs-10000-nsubj-1000-ext.fam", package = "POLMM")
+#' PlinkFile = gsub("-ext.fam","-ext",famFile)
+#' dataFile = system.file("extdata", "POLMM_data.csv", package = "POLMM")
+#' 
+#' famData = data.table::fread(famFile)
+#' egData = data.table::fread(dataFile)
+#'
+#' ## Fit the null POLMM 
+#' objNull = POLMM_Null_Model(as.factor(outcome)~Cova1+Cova2, 
+#'                            data=egData, PlinkFile = PlinkFile, subjData = egData$IID, subjPlink = famData$V2)
+#' 
+#' ## If control$seed is not changed, objNull$tau should be 0.7357
+#' objNull$tau
+#' 
+#' ## If you want more accurate parameter estimation, smaller tolBeta/tolTau can be used. 
+#' objNull = POLMM_Null_Model(as.factor(outcome)~Cova1+Cova2, 
+#'                            data=egData, PlinkFile = PlinkFile, subjData = egData$IID, subjPlink = famData$V2,
+#'                            control=list(tolTau=0.001))  # Default toTau = 0.002
+#' objNull$tau  # 0.7368
+#' 
 #' @return an R object of 'POLMM_NULL' with the following elements, J is number of categories.
 #' \item{N}{Number of individuals in analysis.}
 #' \item{M}{Number of markers in Plink file.}
@@ -44,7 +67,7 @@
 #' \item{bVec}{Random effect: estimated to characterize sample relatedness}
 #' \item{eps}{Cutpoints for different categories}
 #' \item{eta}{Linear predicators for all individuals}
-#' \item{yVec}{A matrix (N x J) to indicate the categorical phenotypes.}
+#' \item{yVec}{A vector of the categorical phenotypes.}
 #' \item{muMat}{A matrix (N x J), probability in each category.}
 #' \item{YMat}{A matrix (N x (J-1)), working variable in each category.}
 #' \item{subjIDs}{A vector of individual IDs in null model}
@@ -175,15 +198,15 @@ updateCtrl = function(control.new){
                  seed = 12345678,
                  tracenrun = 30,
                  maxiter = 100,
-                 tolBeta = 0.01,
-                 tolTau = 0.02,
+                 tolBeta = 0.001,
+                 tolTau = 0.002,
                  tau = 0.5,
                  maxiterPCG = 100,
                  tolPCG = 1e-5,
                  maxiterEps = 100,
                  tolEps = 1e-5,
                  minMafVarRatio = 0.1,
-                 nSNPsVarRatio = 30,
+                 nSNPsVarRatio = 20,
                  CVcutoff = 0.0025,
                  LOCO = T)
   
@@ -228,12 +251,11 @@ updateCtrl = function(control.new){
 #' egData = data.table::fread(dataFile)
 #'
 #' ## Fit the null POLMM 
-#' objNull = POLMM_Null_Model(as.factor(outcome)~Cova1+Cova2, data=egData, PlinkFile = PlinkFile, subjData = egData$IID, subjPlink = famData$V2)
+#' objNull = POLMM_Null_Model(as.factor(outcome)~Cova1+Cova2, 
+#'                            data=egData, PlinkFile = PlinkFile, subjData = egData$IID, subjPlink = famData$V2)
 #' 
-#' ## If control$seed is not changed, objNull$tau should be 0.705
+#' ## If control$seed is not changed, objNull$tau should be 0.735
 #' objNull$tau
-#'
-#' obj
 #'   
 #' ## when using function POLMM(), argument chrVec should be from
 #' names(objNull$LOCOList)
@@ -246,7 +268,7 @@ updateCtrl = function(control.new){
 #' 
 #' head(outPOLMM)
 #' round(as.numeric(outPOLMM$pval.spa),2)
-#' ## 0.90 0.47 0.83 0.71 0.34 0.30 0.20 0.82 0.25 0.71
+#' ## [1] 0.89 0.46 0.82 0.72 0.34 0.30 0.20 0.82 0.25 0.70
 
 POLMM = function(GMat,            # n x m matrix
                  obj_Null,
@@ -316,7 +338,7 @@ POLMM = function(GMat,            # n x m matrix
         next
       ## 
       adjG = outputadjGFast(GVec, objP)
-      adjGMat = adjG$adjGMat
+      adjGVec = adjG$adjGVec
       Stat = adjG$Stat
       VarW = adjG$VarW
       VarP = VarW * r
@@ -324,7 +346,7 @@ POLMM = function(GMat,            # n x m matrix
       pval.spa = pval.norm = 2*pnorm(-1*z, lower.tail=T)
       if(z > SPAcutoff){   
         pval.spa = Saddle_Prob(Stat, VarP, VarW,
-                               adjGMat, muMat, iRMat)   # n x (J-1)
+                               adjGVec, muMat, iRMat)   # n x (J-1)
       }
       OutMat = rbind(OutMat,
                      c(SNPID, chr, MAF, Stat, VarW, VarP, pval.norm, pval.spa))
@@ -468,12 +490,15 @@ Get_Saddle_Prob = function(Stat,
 Saddle_Prob = function(Stat,
                        VarP,
                        VarW,
-                       adjGMat, # n x (J-1)
-                       muMat,  # n x J
+                       adjGVec, # n x 1
+                       muMat,   # n x J
                        iRMat)   # n x (J-1)
 {
   muMat1 = muMat[,-1*ncol(muMat),drop=F]  # remove the last column
   adjStat = Stat / sqrt(VarP)
+  n = nrow(muMat)
+  J = ncol(muMat)
+  adjGMat = matrix(adjGVec, n, J-1)
   cMat = adjGMat / iRMat / sqrt(VarW);
   m1 = sum(muMat1 * cMat)
   

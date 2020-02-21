@@ -34,7 +34,7 @@ an R object of 'POLMM_NULL' with the following elements, J is number of categori
 \item{bVec}{Random effect: estimated to characterize sample relatedness}
 \item{eps}{Cutpoints for different categories}
 \item{eta}{Linear predicators for all individuals}
-\item{yVec}{A matrix (N x J) to indicate the categorical phenotypes.}
+\item{yVec}{A vector of the categorical phenotypes.}
 \item{muMat}{A matrix (N x J), probability in each category.}
 \item{YMat}{A matrix (N x (J-1)), working variable in each category.}
 \item{subjIDs}{A vector of individual IDs in null model}
@@ -58,19 +58,41 @@ More information about the list of 'control'
 \item{seed: An integer as random seed [default=12345678].}
 \item{tracenrun: Number of runs for trace estimator [default=30].}
 \item{maxiter: Maximum number of iterations used to fit the null POLMM [default=100].}
-\item{tolBeta: Positive tolerance for fixed effect coefficients; the iterations converge when |beta - beta_old| / (|beta| + 0.1) < tolBeta [default=0.01].}
-\item{tolTau: Positive tolerance for random effect variance component (tau); the iterations converge when |tau - tau_old| / (|tau| + 0.1) < tolTau [default=0.02].}
+\item{tolBeta: Positive tolerance for fixed effect coefficients; the iterations converge when |beta - beta_old| / (|beta| + |beta_old| + tolBeta) < tolBeta [default=0.001].}
+\item{tolTau: Positive tolerance for random effect variance component (tau); the iterations converge when |tau - tau_old| / (|tau| + |tau_old| + tolTau) < tolTau [default=0.002].}
 \item{tau: Initial value of variance component (tau) [default=0.5].}
 \item{maxiterPCG: Maximum number of iterations for PCG to converge [default=100].}
 \item{tolPCG: Positive tolerance for PCG to converge [default=1e-5].}
 \item{maxiterEps: Maximum number of iterations for cutpoints estimation [default=100].}
 \item{tolEps: Positive tolerance for cutpoints estimation to converge [default=1e-5].}
 \item{minMafVarRatio: Minimal value of MAF cutoff to select markers (from Plink file) to estimate variance ratio [default=0.1].}
-\item{nSNPsVarRatio: Initial number of selected markers to estimate variance ratio [default=30], the number will be automatically added by 10 until the coefficient of variantion (CV) of the variance ratio estimate is below CVcutoff.}
+\item{nSNPsVarRatio: Initial number of selected markers to estimate variance ratio [default=20], the number will be automatically added by 10 until the coefficient of variantion (CV) of the variance ratio estimate is below CVcutoff.}
 \item{CVcutoff: Minimal cutoff of coefficient of variantion (CV) for variance ratio estimation [default=0.0025].}
 \item{LOCO: Whether to apply the leave-one-chromosome-out (LOCO) approach, if FALSE, 'GMatRatio' is required [default=TRUE].}
 }
 }
 \examples{
-check help(POLMM) for an example.
+#' ## We use a Plink file with 10,000 markers and 1,000 subjects to constract GRM for demonstration. 
+## For real data analysis, we recommend >= 100,000 common markers (MAF > 0.05 or 0.01).
+## Selection of the common markers is similar as in Principle Components Analysis (PCA).
+famFile = system.file("extdata", "nSNPs-10000-nsubj-1000-ext.fam", package = "POLMM")
+PlinkFile = gsub("-ext.fam","-ext",famFile)
+dataFile = system.file("extdata", "POLMM_data.csv", package = "POLMM")
+
+famData = data.table::fread(famFile)
+egData = data.table::fread(dataFile)
+
+## Fit the null POLMM 
+objNull = POLMM_Null_Model(as.factor(outcome)~Cova1+Cova2, 
+                           data=egData, PlinkFile = PlinkFile, subjData = egData$IID, subjPlink = famData$V2)
+
+## If control$seed is not changed, objNull$tau should be 0.7357
+objNull$tau
+
+## If you want more accurate parameter estimation, smaller tolBeta/tolTau can be used. 
+objNull = POLMM_Null_Model(as.factor(outcome)~Cova1+Cova2, 
+                           data=egData, PlinkFile = PlinkFile, subjData = egData$IID, subjPlink = famData$V2,
+                           control=list(tolTau=0.001))  # Default toTau = 0.002
+objNull$tau  # 0.7368
+
 }

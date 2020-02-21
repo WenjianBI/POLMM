@@ -42,12 +42,11 @@ famData = data.table::fread(famFile)
 egData = data.table::fread(dataFile)
 
 ## Fit the null POLMM 
-objNull = POLMM_Null_Model(as.factor(outcome)~Cova1+Cova2, data=egData, PlinkFile = PlinkFile, subjData = egData$IID, subjPlink = famData$V2)
+objNull = POLMM_Null_Model(as.factor(outcome)~Cova1+Cova2, 
+                           data=egData, PlinkFile = PlinkFile, subjData = egData$IID, subjPlink = famData$V2)
 
-## If control$seed is not changed, objNull$tau should be 0.705
+## If control$seed is not changed, objNull$tau should be 0.735
 objNull$tau
-
-obj
   
 ## when using function POLMM(), argument chrVec should be from
 names(objNull$LOCOList)
@@ -60,5 +59,5 @@ outPOLMM = POLMM(GMat, objNull, "1", 0.001)
 
 head(outPOLMM)
 round(as.numeric(outPOLMM$pval.spa),2)
-## 0.90 0.47 0.83 0.71 0.34 0.30 0.20 0.82 0.25 0.71
+## [1] 0.89 0.46 0.82 0.72 0.34 0.30 0.20 0.82 0.25 0.70
 }
