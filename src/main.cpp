@@ -12,7 +12,295 @@ using namespace std;
 using namespace Rcpp;
 using namespace RcppParallel;
 
-// class to store genotype from plink file
+////////////////// sub-functions //////////////
+
+// yMat: matrix with dim of n x J
+// [[Rcpp::export]]
+arma::mat getyMatR(arma::mat yVec, int n, int J)
+{
+  arma::mat yMat(n, J, arma::fill::zeros);
+  for(int i = 0; i < n; i++)
+    yMat(i, yVec(i)-1) = 1;
+  return(yMat);
+}
+
+double getInnerProd(arma::mat& x1Mat, arma::mat& x2Mat)
+{
+  double innerProd = arma::accu(x1Mat % x2Mat);
+  return(innerProd);
+}
+
+arma::vec nb(int n){
+  return(Rcpp::rbinom(n,1,0.5));
+}
+
+double calCV(arma::vec xVec){
+  int n = xVec.size();
+  double Mean = arma::mean(xVec);
+  double Sd = arma::stddev(xVec);
+  double CV = (Sd/Mean)/n;
+  return(CV);
+}
+
+double get_cpu_time(){
+  return (double)clock() / CLOCKS_PER_SEC;
+}
+
+// C++ version of which(). Note: start from 0, not 1 
+std::vector<int> whichCPP(Rcpp::StringVector strVec, 
+                          std::string strValue)
+{
+  std::vector<int> indexVec;
+  for(int i = 0; i < strVec.size(); i++){
+    if(std::string(strVec(i))==strValue)
+      indexVec.push_back(i);
+  }
+  return(indexVec);
+}
+
+// outMat = PsiMat %*% xMat, PsiMat is determined by muMat
+arma::mat getPsixMat(arma::mat xMat,    // matrix: n x (J-1)
+                     arma::mat muMat)   // matrix: n x J
+{
+  int n = muMat.n_rows;
+  int J = muMat.n_cols;
+  
+  arma::mat Psi_xMat(n, J-1);
+  // loop for samples
+  for(int i = 0; i < n; i++){
+    arma::rowvec muVec(J-1);
+    for(int j = 0; j < J-1; j++){
+      Psi_xMat(i,j) = muMat(i,j) * xMat(i,j);
+      muVec(j) = muMat(i,j);
+    }
+    double sum_mu_x = sum(Psi_xMat.row(i));
+    Psi_xMat.row(i) -= muVec * sum_mu_x; 
+  }
+  return(Psi_xMat);
+}
+
+// duplicate each row for (J-1) times: n x p -> n(J-1) x p
+arma::mat getCovaMat(arma::mat Cova,   // matrix: n x p
+                     int n, int J, int p)      
+{
+  arma::mat CovaMat(n*(J-1), p);
+  int index = 0;
+  for(int i = 0; i < n; i++){
+    for(int j = 0; j < J-1; j++){
+      CovaMat.row(index) = Cova.row(i);
+      index++;
+    }
+  }
+  return(CovaMat);
+}
+
+// convert: n x (J-1) -> n(J-1) x 1
+arma::vec convert1(arma::mat xMat, // matrix: n x (J-1)
+                   int n, int J) 
+{
+  arma::vec xVec(n*(J-1));
+  int index = 0;
+  for(int i = 0; i < n; i++){
+    for(int j = 0; j < J-1; j++){
+      xVec(index) = xMat(i,j);
+      index++;
+    }
+  }
+  return(xVec);
+}
+
+// convert: n(J-1) x 1 -> n x (J-1)
+arma::mat convert2(arma::vec xVec, // n(J-1) x 1 
+                   int n, int J)
+{
+  arma::mat xMat(n,(J-1));
+  int index = 0;
+  for(int i = 0; i < n; i++){
+    for(int j = 0; j < J-1; j++){
+      xMat(i,j) = xVec(index);
+      index++;
+    }
+  }
+  return(xMat);
+}
+
+// sum each (J-1) cols to 1 col: p x n(J-1) -> p x n (OR) p x (J-1) -> p x 1
+arma::mat sumCols(arma::mat inMat,
+                  int J)
+{
+  int n = inMat.n_cols / (J-1);
+  int p = inMat.n_rows;
+  arma::mat outMat(p, n, arma::fill::zeros);
+  int index = 0;
+  for(int i = 0; i < n; i++){
+    for(int j = 0; j < J-1; j++){
+      outMat.col(i) += inMat.col(index);
+      index++;
+    }
+  }
+  return(outMat);
+}
+
+// get RPsiP: (J-1) x (J-1) x n 
+// Only used in getVarWFast(): 
+arma::cube getRPsiR(arma::mat muMat,
+                    arma::mat iRMat,
+                    int n, int J, int p)   
+{
+  arma::cube RPsiR(J-1, J-1, n, arma::fill::zeros);
+  arma::mat muRMat = muMat.cols(0, J-2) / iRMat;
+  for(int i = 0; i < n; i++){
+    for(int j1 = 0; j1 < J-1; j1++){
+      RPsiR(j1,j1,i) += muRMat(i,j1) / iRMat(i,j1) - muRMat(i,j1) * muRMat(i,j1);
+      for(int j2 = j1+1; j2 < J-1; j2++){
+        RPsiR(j1,j2,i) -= muRMat(i,j1) * muRMat(i,j2);
+      }
+    }
+  }
+  return(RPsiR);
+}
+
+// get a list for p value calculation in step 2
+// [[Rcpp::export]]
+Rcpp::List getobjP(arma::mat Cova,     // matrix: n x p
+                   arma::mat yMat,
+                   arma::mat muMat,    // matrix: n x J
+                   arma::mat iRMat)    // matrix: n x (J-1)
+{
+  int n = muMat.n_rows;
+  int J = muMat.n_cols;
+  int p = Cova.n_cols;
+  
+  // output for Step 2
+  arma::mat XR_Psi_R(p, n*(J-1));                // p x n(J-1)
+  arma::mat CovaMat = getCovaMat(Cova, n, J, p); // n(J-1) x p
+  for(int k = 0; k < p; k++){
+    arma::mat xMat = convert2(CovaMat.col(k), n, J);
+    arma::vec temp = convert1(getPsixMat(xMat / iRMat, muMat) / iRMat, n, J);
+    XR_Psi_R.row(k) = temp.t();
+  }
+  arma::mat XXR_Psi_RX = CovaMat * inv(XR_Psi_R * CovaMat);             // (n(J-1) x p) * (p x p) = n(J-1) x p
+  
+  // sum each (J-1) rows to 1 row: p x n(J-1) -> p x n
+  arma::mat XR_Psi_R_new = sumCols(XR_Psi_R, J);      // p x n
+  arma::mat ymuMat = yMat - muMat;                    // n x J
+  arma::mat RymuMat = ymuMat.cols(0, J-2) / iRMat;    // n x (J-1): R %*% (y - mu)
+  arma::mat RymuVec = sumCols(RymuMat, J);            // n x 1
+  arma::cube RPsiR = getRPsiR(muMat, iRMat, n, J, p); // (J-1) x (J-1) x n 
+  
+  Rcpp::List objP = List::create(Named("n")=n,
+                                 Named("J")=J,
+                                 Named("p")=p,
+                                 Named("XXR_Psi_RX")=XXR_Psi_RX,
+                                 Named("XR_Psi_R_new")=XR_Psi_R_new,           
+                                 Named("RymuVec")=RymuVec,
+                                 Named("RPsiR")=RPsiR,
+                                 Named("muMat")=muMat,
+                                 Named("iRMat")=iRMat);
+  return(objP);
+}
+
+double getVarWFast(arma::mat adjGMat,  // n x (J-1)
+                   arma::cube RPsiR,   // (J-1) x (J-1) x n
+                   int n, int J)
+{
+  double VarW = 0;
+  for(int i = 0; i < n; i++){
+    for(int j1 = 0; j1 < J-1; j1++){
+      VarW += RPsiR(j1,j1,i) * adjGMat(i,j1) * adjGMat(i,j1);
+      for(int j2 = j1+1; j2 < J-1; j2++){
+        VarW += 2 * RPsiR(j1,j2,i) * adjGMat(i,j1) * adjGMat(i,j2);
+      }
+    }
+  }
+  return(VarW);
+}
+
+double getStatFast(arma::vec GVec,         // n x 1
+                   arma::vec RymuVec,      // n x 1: row sum of the n x (J-1) matrix R %*% (yMat - muMat)
+                   int n)
+{
+  double Stat = 0;
+  for(int i = 0; i < n; i++)
+    Stat += GVec(i) * RymuVec(i);
+  return(Stat);
+}
+
+arma::mat getadjGFast(arma::vec GVec,
+                      arma::mat XXR_Psi_RX,   // XXR_Psi_RX ( n(J-1) x p )
+                      arma::mat XR_Psi_R_new, // XR_Psi_R_new ( p x n ), sum up XR_Psi_R ( p x n(J-1) ) for each subject 
+                      int n, int J, int p)
+{
+  arma::mat adjGMat(n, J-1);
+  
+  // To increase computational efficiency when lots of GVec elements are 0
+  arma::vec XR_Psi_RG1(p, arma::fill::zeros);
+  for(int i = 0; i < n; i++){
+    if(GVec(i) != 0){
+      XR_Psi_RG1 += XR_Psi_R_new.col(i) * GVec(i);
+    }
+  }
+  
+  arma::vec TempVec = XXR_Psi_RX * XR_Psi_RG1;   // n(J-1) x 1
+  int index = 0;
+  for(int i = 0; i < n; i++){
+    for(int j = 0; j < J-1; j++){
+      adjGMat(i,j) = GVec(i) - TempVec(index);
+      index++;
+    }
+  }
+  return(adjGMat);
+}
+
+// [[Rcpp::export]]
+Rcpp::List outputadjGFast(arma::vec GVec,
+                          Rcpp::List objP)
+{
+  arma::mat adjGMat = getadjGFast(GVec, objP["XXR_Psi_RX"], objP["XR_Psi_R_new"], objP["n"], objP["J"], objP["p"]);
+  double Stat = getStatFast(GVec, objP["RymuVec"], objP["n"]);
+  double VarW = getVarWFast(adjGMat, objP["RPsiR"], objP["n"], objP["J"]);
+  Rcpp::List outList = List::create(Named("adjGMat")=adjGMat,
+                                    Named("Stat")=Stat,           
+                                    Named("VarW")=VarW);
+  
+  return(outList);
+}
+
+
+arma::Mat<int> makeChrIdx(string excludeChr, vector<string> chrVecParallel, size_t M){
+  if(excludeChr=="n"){
+    arma::Mat<int> ChrIdx(1,2);
+    ChrIdx(0,0) = 0;
+    ChrIdx(0,1) = M;
+    return(ChrIdx);
+  }
+  
+  arma::Mat<int> ChrIdx;
+  int idxStart = 0;
+  for(int i = 0; i < M; i++){
+    if(chrVecParallel[i] == excludeChr){
+      if(idxStart != i){
+        arma::Row<int> newChrIdx(2);
+        newChrIdx(0) = idxStart;
+        newChrIdx(1) = i;
+        ChrIdx.insert_rows(0, newChrIdx);
+      }
+      idxStart = i + 1;
+    }
+  }
+  
+  if(idxStart != M){
+    arma::Row<int> newChrIdx(2);
+    newChrIdx(0) = idxStart;
+    newChrIdx(1) = M;
+    ChrIdx.insert_rows(0, newChrIdx);
+  }
+  
+  return(ChrIdx);
+}
+
+////////////////// genoClass //////////////
+
 class genoClass{
 private:
   
@@ -52,7 +340,7 @@ private:
   void setOneMarkerArray(int);
   float getinvStd(float);
   void setDiagStdGeno();
-    
+  
   arma::vec alleleFreqVec; 
   arma::vec invStdVec;
   Rcpp::StringVector chrVec;
@@ -69,10 +357,10 @@ private:
   }
   
   void setStdGenoLookUpArr(double maf, double invsd, arma::vec & stdGenoLookUpArr){
-	double maf2 = 2 * maf;
-	stdGenoLookUpArr(0) = (0-maf2)*invsd;
-	stdGenoLookUpArr(1) = (1-maf2)*invsd;
-	stdGenoLookUpArr(2) = (2-maf2)*invsd;
+    double maf2 = 2 * maf;
+    stdGenoLookUpArr(0) = (0-maf2)*invsd;
+    stdGenoLookUpArr(1) = (1-maf2)*invsd;
+    stdGenoLookUpArr(2) = (2-maf2)*invsd;
   }
   
 public:
@@ -111,10 +399,10 @@ void genoClass::setGenoObj(string Plink,
   Rcpp::IntegerVector chrVecCounts = table(chrVec);
   Rcpp::StringVector chrVecNames = chrVecCounts.names();
   for(int i = 0; i < chrVecCounts.size(); i++){
-	  cout << "Number of markers in chr " << chrVecNames(i) << ":\t" << chrVecCounts(i) << endl;
+    cout << "Number of markers in chr " << chrVecNames(i) << ":\t" << chrVecCounts(i) << endl;
   }
   ///////////////////////////////////////// MAIN PART //////////////////////////////
-
+  
   // loop for all SNPs
   float freq, invStd;
   for(size_t m=0; m<M; m++)
@@ -130,7 +418,7 @@ void genoClass::setGenoObj(string Plink,
       cout << "Complete\t" << m+1 <<"\tSNPs!!!!" << endl;
     }
   }
-
+  
   cout << endl << "Complete reading data!!" << endl;
   setDiagStdGeno();
   ibedfile.close();
@@ -160,7 +448,7 @@ void genoClass::setOneMarkerArray(int m)
     }
   }
 }
-  
+
 float genoClass::getOneMarkerPlink(vector<unsigned char>& OneMarkerG4_Old,
                                    arma::vec posSampleInPlink)
 {
@@ -177,10 +465,10 @@ float genoClass::getOneMarkerPlink(vector<unsigned char>& OneMarkerG4_Old,
   for(size_t index=0; index<N; index++){
     bufferG1 = OneMarkerG1_Old[posSampleInPlink[index] - 1];   // C++ start from 0
     switch(bufferG1){
-      case HOM_REF: break;
-      case MISSING: indexNA.push_back(index);break;
-      case HET: sum+=1;break;
-      case HOM_ALT: sum+=2;break;
+    case HOM_REF: break;
+    case MISSING: indexNA.push_back(index);break;
+    case HET: sum+=1;break;
+    case HOM_ALT: sum+=2;break;
     }
     OneMarkerG1[index] = bufferG1;
   }
@@ -193,9 +481,9 @@ float genoClass::getOneMarkerPlink(vector<unsigned char>& OneMarkerG4_Old,
     int bestguess = round(freq);
     unsigned char fill=0; 
     switch(bestguess){
-      case 0: fill=HOM_REF;break;
-      case 1: fill=HET;break;
-      case 2: fill=HOM_ALT;break;
+    case 0: fill=HOM_REF;break;
+    case 1: fill=HET;break;
+    case 2: fill=HOM_ALT;break;
     }
     for(int i=0; i<lengthNA; i++){
       OneMarkerG1[indexNA[i]]=fill;
@@ -267,15 +555,15 @@ void genoClass::openPlink(string Plink, arma::vec posSampleInPlink)
 void genoClass::setChrVec(string bimfile, Rcpp::StringVector& chrVecTemp, vector<string>& chrVecParallel){
   string temp;
   ifstream ifile;
-
+  
   ifile.open(bimfile.c_str());
   int count = 0;
   while(getline(ifile, temp)){
-	string chr = temp.substr(0, temp.find('\t'));
+    string chr = temp.substr(0, temp.find('\t'));
     chrVecTemp[count] = Rcpp::String(chr);
-	chrVecParallel[count] = chr;
-	count++;
- }
+    chrVecParallel[count] = chr;
+    count++;
+  }
   ifile.close();
 }
 
@@ -307,31 +595,31 @@ void genoClass::getOneMarker(size_t m, bool ifStd, arma::vec* oneMarker){
   size_t a,b,i,j;
   
   if(ifStd){
-	 arma::vec stdGenoLookUpArr(3);
-	 setStdGenoLookUpArr(alleleFreqVec[m], invStdVec[m], stdGenoLookUpArr);
-	 for(i=startBytesIdxinVec; i< endBytesIdxinVec; i++){
-		 bufferG4b = genoVecofPointers[indexOvectorPointer]->at(i); //avoid large continuous memory usage
-		 for(j=0; (j<4)&(ind<N); j++,ind++){
-			 b = bufferG4b & 1 ;
-			 bufferG4b = bufferG4b >> 1;
-			 a = bufferG4b & 1 ;
-			 bufferG4b = bufferG4b >> 1;
-			 bufferG1b = 2-(a+b);
-			 oneMarker->at(ind) = stdGenoLookUpArr(bufferG1b);
-		}
-	} 
+    arma::vec stdGenoLookUpArr(3);
+    setStdGenoLookUpArr(alleleFreqVec[m], invStdVec[m], stdGenoLookUpArr);
+    for(i=startBytesIdxinVec; i< endBytesIdxinVec; i++){
+      bufferG4b = genoVecofPointers[indexOvectorPointer]->at(i); //avoid large continuous memory usage
+      for(j=0; (j<4)&(ind<N); j++,ind++){
+        b = bufferG4b & 1 ;
+        bufferG4b = bufferG4b >> 1;
+        a = bufferG4b & 1 ;
+        bufferG4b = bufferG4b >> 1;
+        bufferG1b = 2-(a+b);
+        oneMarker->at(ind) = stdGenoLookUpArr(bufferG1b);
+      }
+    } 
   }else{
-	 for(i=startBytesIdxinVec; i< endBytesIdxinVec; i++){
-		 bufferG4b = genoVecofPointers[indexOvectorPointer]->at(i); //avoid large continuous memory usage
-		 for(j=0; (j<4)&(ind<N); j++,ind++){
-			 b = bufferG4b & 1 ;
-			 bufferG4b = bufferG4b >> 1;
-			 a = bufferG4b & 1 ;
-			 bufferG4b = bufferG4b >> 1;
-			 bufferG1b = 2-(a+b);
-			 oneMarker->at(ind) = bufferG1b;
-		}
-	} 
+    for(i=startBytesIdxinVec; i< endBytesIdxinVec; i++){
+      bufferG4b = genoVecofPointers[indexOvectorPointer]->at(i); //avoid large continuous memory usage
+      for(j=0; (j<4)&(ind<N); j++,ind++){
+        b = bufferG4b & 1 ;
+        bufferG4b = bufferG4b >> 1;
+        a = bufferG4b & 1 ;
+        bufferG4b = bufferG4b >> 1;
+        bufferG1b = 2-(a+b);
+        oneMarker->at(ind) = bufferG1b;
+      }
+    } 
   }
 }
 
@@ -363,19 +651,19 @@ struct getKinbVecParallel : public Worker
   unsigned int N;
   unsigned int M;
   genoClass* ptrGeno;
-
+  
   // product that I have accumulated
   arma::vec KinbVec;
   int counts;
-
+  
   // constructors
   getKinbVecParallel(arma::vec& bVec, genoClass* ptrGeno)
     : bVec(bVec), ptrGeno(ptrGeno) 
   {
     M = ptrGeno->getM();
     N = ptrGeno->getN();
-	KinbVec.zeros(N);
-	counts = 0;
+    KinbVec.zeros(N);
+    counts = 0;
   }
   getKinbVecParallel(const getKinbVecParallel& getKinbVecParallel, Split)
     : bVec(getKinbVecParallel.bVec), ptrGeno(getKinbVecParallel.ptrGeno)
@@ -383,57 +671,26 @@ struct getKinbVecParallel : public Worker
     N = getKinbVecParallel.N;
     M = getKinbVecParallel.M;
     KinbVec.zeros(getKinbVecParallel.N);
-	counts = 0;
+    counts = 0;
   }
   // process just the elements of the range I've been asked to
   void operator()(std::size_t begin, std::size_t end) {
     arma::vec oneMarker(N);
     for(unsigned int m = begin; m < end; m++){
-		ptrGeno->getOneMarker(m, 1, &oneMarker);
-		// KinbVec += oneMarker * innerProduct(oneMarker, bVec);
-		KinbVec += oneMarker * arma::dot(oneMarker, bVec);
-		counts++;
+      ptrGeno->getOneMarker(m, 1, &oneMarker);
+      // KinbVec += oneMarker * innerProduct(oneMarker, bVec);
+      KinbVec += oneMarker * arma::dot(oneMarker, bVec);
+      counts++;
     }
   }
-
+  
   // join my value with that of another InnerProduct
   void join(const getKinbVecParallel & rhs) {
     KinbVec += rhs.KinbVec;
-	counts += rhs.counts;
+    counts += rhs.counts;
   }
 };
 
-arma::Mat<int> makeChrIdx(string excludeChr, vector<string> chrVecParallel, size_t M){
-	if(excludeChr=="n"){
-		arma::Mat<int> ChrIdx(1,2);
-		ChrIdx(0,0) = 0;
-		ChrIdx(0,1) = M;
-		return(ChrIdx);
-	}
-	
-	arma::Mat<int> ChrIdx;
-	int idxStart = 0;
-	for(int i = 0; i < M; i++){
-		if(chrVecParallel[i] == excludeChr){
-			if(idxStart != i){
-				arma::Row<int> newChrIdx(2);
-				newChrIdx(0) = idxStart;
-				newChrIdx(1) = i;
-				ChrIdx.insert_rows(0, newChrIdx);
-			}
-			idxStart = i + 1;
-		}
-	}
-	
-	if(idxStart != M){
-		arma::Row<int> newChrIdx(2);
-		newChrIdx(0) = idxStart;
-		newChrIdx(1) = M;
-		ChrIdx.insert_rows(0, newChrIdx);
-	}
-	
-	return(ChrIdx);
-}
 
 arma::vec getKinbVec(arma::vec bVec, genoClass* ptrGeno, string excludeChr) {
   
@@ -444,165 +701,21 @@ arma::vec getKinbVec(arma::vec bVec, genoClass* ptrGeno, string excludeChr) {
   // declare the InnerProduct instance that takes a pointer to the vector data
   getKinbVecParallel getKinbVecParallel(bVec, ptrGeno);
   
-  // arma::vec KinbVec(N, arma::fill::zeros);
-  // int counts = 0;
-  
   arma::Mat<int> ChrIdx = makeChrIdx(excludeChr, chrVecParallel, M);
   // cout << "ChrIdx:" << endl << ChrIdx << endl;
   
   int nIdx = ChrIdx.n_rows;
   for(int i = 0; i < nIdx; i++){
-	  int idxStart = ChrIdx(i,0);
-	  int idxEnd = ChrIdx(i,1);
-	  // call paralleReduce to start the work
-      parallelReduce(idxStart, idxEnd, getKinbVecParallel);
-	  // KinbVec += getKinbVecParallel.KinbVec;
-	  // counts += getKinbVecParallel.counts;
+    int idxStart = ChrIdx(i,0);
+    int idxEnd = ChrIdx(i,1);
+    // call paralleReduce to start the work
+    parallelReduce(idxStart, idxEnd, getKinbVecParallel);
   }
   
-  // cout << "getKinbVecParallel.counts:\t" << getKinbVecParallel.counts << endl;
-  // return the computed product
-  // return KinbVec/counts;
   return getKinbVecParallel.KinbVec/getKinbVecParallel.counts;
 }
 
-
-arma::vec nb(int n){
-  return(Rcpp::rbinom(n,1,0.5));
-}
-
-double get_cpu_time(){
-  return (double)clock() / CLOCKS_PER_SEC;
-}
-
-double calCV(arma::vec xVec){
-  int n = xVec.size();
-  double Mean = arma::mean(xVec);
-  double Sd = arma::stddev(xVec);
-  double CV = (Sd/Mean)/n;
-  return(CV);
-}
-
-double getInnerProd(arma::mat& x1Mat, arma::mat& x2Mat)
-{
-  double innerProd = arma::accu(x1Mat % x2Mat);
-  return(innerProd);
-}
-
-std::vector<int> whichCPP(Rcpp::StringVector chrVec, std::string excludechr)
-{
-  std::vector<int> indexSNPs;
-  for(int i = 0; i < chrVec.size(); i++){
-    if(std::string(chrVec(i))==excludechr){
-      indexSNPs.push_back(i);
-    }
-  }
-  return(indexSNPs);
-}
-
-arma::mat getadjGFast(arma::vec GVec,
-                      arma::mat XXR_Psi_RX,     
-                      arma::mat XR_Psi_R_new, // XR_Psi_R_new ( p x n ), sum up XR_Psi_R ( p x n(J-1) ) for each subject 
-                      int n, int J, int p)
-{
-  arma::mat adjGMat(n, J-1);
-  // To increase computational efficiency when lots of GVec elements are 0
-  arma::vec XR_Psi_RG1(p, arma::fill::zeros);
-  for(int i = 0; i < n; i++){
-    if(GVec(i)!=0){
-      XR_Psi_RG1 += XR_Psi_R_new.col(i) * GVec(i);
-    }
-  }
-  
-  arma::vec TempVec = XXR_Psi_RX * XR_Psi_RG1;   // n(J-1) x 1
-  int index = 0;
-  for(int i = 0; i < n; i++){
-    for(int j = 0; j < J-1; j++){
-      adjGMat(i,j) = GVec(i) - TempVec(index);
-      index++;
-    }
-  }
-  return(adjGMat);
-}
-
-double getStatFast(arma::vec GVec,         // n x 1
-                   arma::mat RymuMat,      // n x (J-1): R %*% (y - mu)
-                   int n, int J)
-{
-  double Stat = 0;
-  for(int i = 0; i < n; i++){
-    for(int j = 0; j < J-1; j++){
-      Stat += GVec(i) * RymuMat(i,j);
-    }
-  }
-  return(Stat);
-}
-
-double getVarWFast(arma::mat adjGMat,  // n x (J-1)
-                   arma::cube RPsiR,   // (J-1) x (J-1) x n
-                   int n, int J)
-{
-  double VarW = 0;
-  for(int i = 0; i < n; i++){
-    for(int j1 = 0; j1 < J-1; j1++){
-      VarW += RPsiR(j1,j1,i) * adjGMat(i,j1) * adjGMat(i,j1);
-      for(int j2 = j1+1; j2 < J-1; j2++){
-        VarW += 2 * RPsiR(j1,j2,i) * adjGMat(i,j1) * adjGMat(i,j2);
-      }
-    }
-  }
-  return(VarW);
-}
-
-// [[Rcpp::export]]
-Rcpp::List outputadjGFast(arma::vec GVec,
-                          Rcpp::List objP)
-{
-  arma::mat adjGMat = getadjGFast(GVec, objP["XXR_Psi_RX"], objP["XR_Psi_R_new"], objP["n"], objP["J"], objP["p"]);
-  double Stat = getStatFast(GVec, objP["RymuMat"], objP["n"], objP["J"]);
-  double VarW = getVarWFast(adjGMat, objP["RPsiR"], objP["n"], objP["J"]);
-  
-  Rcpp::List outList = List::create(Named("adjGMat")=adjGMat,
-                                    Named("Stat")=Stat,           
-                                    Named("VarW")=VarW);
-  
-  return(outList);
-}
-
-// [[Rcpp::export]]
-arma::cube getRPsiR_v1(arma::mat muMat,
-                       arma::mat iRMat,
-                       int n, int J)
-{
-  arma::cube RPsiR(J-1, J-1, n, arma::fill::zeros);
-  arma::mat muRMat = muMat.cols(0, J-2) / iRMat;
-  for(int i = 0; i < n; i++){
-    for(int j1 = 0; j1 < J-1; j1++){
-      RPsiR(j1,j1,i) += muRMat(i,j1) / iRMat(i,j1) - muRMat(i,j1) * muRMat(i,j1);
-      for(int j2 = j1+1; j2 < J-1; j2++){
-        RPsiR(j1,j2,i) -= muRMat(i,j1) * muRMat(i,j2);
-        // RPsiR(j2,j1,i) -= muRMat(i,j1) * muRMat(i,j2); // v4.1: RPsiR is only used in function getVarWFast, 
-      }
-    }
-  }
-  return(RPsiR);
-}
-
-// [[Rcpp::export]]
-Rcpp::List outputadjGFast_v1(arma::vec GVec,
-                             Rcpp::List objP,
-                             arma::cube RPsiR)
-{
-  arma::mat adjGMat = getadjGFast(GVec, objP["XXR_Psi_RX"], objP["XR_Psi_R_new"], objP["n"], objP["J"], objP["p"]);
-  double Stat = getStatFast(GVec, objP["RymuMat"], objP["n"], objP["J"]);
-  double VarW = getVarWFast(adjGMat, RPsiR, objP["n"], objP["J"]);
-  
-  Rcpp::List outList = List::create(Named("adjGMat")=adjGMat,
-                                    Named("Stat")=Stat,           
-                                    Named("VarW")=VarW);
-  
-  return(outList);
-}
+////////////////// nullModelClass ////////////// 
 
 class nullModelClass
 {
@@ -639,7 +752,6 @@ private:
   void setParList(Rcpp::List);    // set up parameter list
   void setcontrolList(Rcpp::List);
   void setArray();               // set up dimension 
-  arma::mat getCovaMat();
   arma::mat getyMat();
   void getTraceRandMat();
   arma::vec ZMat(arma::vec), tZMat(arma::vec);
@@ -648,8 +760,6 @@ private:
   void updateMats();
   arma::mat getiPsixMat(arma::mat);
   arma::vec getRowSums(arma::mat);
-  arma::vec convert1(arma::mat xMat);
-  arma::mat convert2(arma::vec xMat);
   void getPCGofSigmaAndCovaMat(arma::mat, arma::mat&, string);
   void getPCGofSigmaAndVector(arma::vec, arma::vec&, string);
   void updateParaConv(string);
@@ -662,17 +772,13 @@ private:
   void updateTau();
   
   // functions if LOCO = TRUE
-  arma::mat getPsixMat(arma::mat);
   Rcpp::List getLOCO(string, std::vector<int>);
-  arma::mat getVarRatio(std::vector<int>, string, Rcpp::List);
+  arma::mat getVarRatio(std::vector<int>, string);
   arma::rowvec getVarOneSNP(arma::vec, string, Rcpp::List);
-  arma::rowvec getVarOneSNP_v1(arma::vec, string, Rcpp::List, arma::cube);
   double getVarP(arma::mat, string);
-  Rcpp::List getobjP();
-  void getRPsiR(arma::cube&);
   
   // functions if LOCO = FALSE
-  arma::mat getVarRatio(arma::mat, Rcpp::List);
+  arma::mat getVarRatio(arma::mat);
   
 public:
   
@@ -727,96 +833,23 @@ void nullModelClass::fitNullModel()
       LOCOList[excludechr] = tempLOCO;
     }
   }else{
-    Rcpp::List objP = getobjP();
     // output variance matrix
-    arma::mat VarRatioMat = getVarRatio(GMatRatio, objP);
+    arma::mat VarRatioMat = getVarRatio(GMatRatio);
     double VarRatio = arma::mean(VarRatioMat.col(4));
     
-    Rcpp::List temp = List::create(Named("objP")=objP,
+    Rcpp::List temp = List::create(Named("muMat")=muMat,
+                                   Named("iRMat")=iRMat,
                                    Named("VarRatioMat")=VarRatioMat,
                                    Named("VarRatio")=VarRatio);
     LOCOList["LOCO=F"] = temp;
   }
 }
 
-// outMat = PsiMat %*% xMat, PsiMat is determined by muMat
-arma::mat nullModelClass::getPsixMat(arma::mat xMat)    // matrix with dim of n x (J-1)
-{
-  arma::mat Psi_xMat(n, J-1);
-  // loop for samples
-  for(int i = 0; i < n; i++){
-    arma::rowvec muVec(J-1);
-    for(int j = 0; j < J-1; j++){
-      Psi_xMat(i,j) = muMat(i,j) * xMat(i,j);
-      muVec(j) = muMat(i,j);
-    }
-    double sum_mu_x = sum(Psi_xMat.row(i));
-    Psi_xMat.row(i) -= muVec * sum_mu_x; 
-  }
-  return(Psi_xMat);
-}
-
-void nullModelClass::getRPsiR(arma::cube& RPsiR)   // (J-1) x (J-1) x n
-{
-  arma::mat muRMat = muMat.cols(0, J-2) / iRMat;
-  for(int i = 0; i < n; i++){
-    for(int j1 = 0; j1 < J-1; j1++){
-      RPsiR(j1,j1,i) += muRMat(i,j1) / iRMat(i,j1) - muRMat(i,j1) * muRMat(i,j1);
-      for(int j2 = j1+1; j2 < J-1; j2++){
-        RPsiR(j1,j2,i) -= muRMat(i,j1) * muRMat(i,j2);
-        // RPsiR(j2,j1,i) -= muRMat(i,j1) * muRMat(i,j2); // v4.1: RPsiR is only used in function getVarWFast, 
-      }
-    }
-  }
-}
-
-// get a list for p value calculation in step 2
-Rcpp::List nullModelClass::getobjP()
-{
-  // output for Step 2
-  arma::mat XR_Psi_R(p, n*(J-1));       // p x n(J-1)
-  arma::mat xMat(n, J-1);
-  arma::vec temp(n*(J-1));
-  for(int k = 0; k < p; k++){
-    xMat = convert2(CovaMat.col(k));
-    temp = convert1(getPsixMat(xMat / iRMat) / iRMat);
-    XR_Psi_R.row(k) = temp.t();
-  }
-  arma::mat XXR_Psi_RX = CovaMat * inv(XR_Psi_R * CovaMat);             // n(J-1) x p
-  iSigmaX_XSigmaX = iSigma_CovaMat * inv(CovaMat.t() * iSigma_CovaMat);
-  
-  // arma::cube RPsiR(J-1, J-1, n, arma::fill::zeros);
-  // getRPsiR(RPsiR);
-  
-  arma::mat XR_Psi_R_new(p, n, arma::fill::zeros);  // p x n
-  int index = 0;
-  for(int i = 0; i < n; i++){
-    for(int j = 0; j < J-1; j++){
-      XR_Psi_R_new.col(i) += XR_Psi_R.col(index);
-      index++;
-    }
-  }
-  
-  arma::mat ymuMat = yMat - muMat;
-  arma::mat RymuMat = ymuMat.cols(0, J-2) / iRMat; // n x (J-1): R %*% (y - mu)
-  
-  Rcpp::List objP = List::create(Named("n")=n,
-                                 Named("J")=J,
-                                 Named("p")=p,
-                                 Named("XXR_Psi_RX")=XXR_Psi_RX,
-                                 // Named("RPsiR")=RPsiR,
-                                 Named("XR_Psi_R_new")=XR_Psi_R_new,           
-                                 Named("RymuMat")=RymuMat,
-                                 Named("muMat")=muMat,
-                                 Named("iRMat")=iRMat);
-  
-  return(objP);
-}
 
 double nullModelClass::getVarP(arma::mat adjGMat,
                                string excludechr)
 {
-  arma::vec adjGVec = convert1(adjGMat);
+  arma::vec adjGVec = convert1(adjGMat, n, J);
   arma::vec iSigmaGVec(n*(J-1), arma::fill::zeros);
   getPCGofSigmaAndVector(adjGVec, iSigmaGVec, excludechr);
   double VarP = as_scalar(adjGVec.t() * (iSigmaGVec - iSigmaX_XSigmaX * (CovaMat.t() * iSigmaGVec)));
@@ -846,49 +879,24 @@ arma::rowvec nullModelClass::getVarOneSNP(arma::vec GVec,
   return(VarOut);
 }
 
-arma::rowvec nullModelClass::getVarOneSNP_v1(arma::vec GVec,
-                                             string excludechr,
-                                             Rcpp::List objP,
-                                             arma::cube RPsiR)
+arma::mat nullModelClass::getVarRatio(arma::mat GMatRatio)
 {
-  arma::rowvec VarOut(5);
-  double AF = sum(GVec) / GVec.size() / 2;
-  if(AF > 0.5)
-    AF = 1 - AF;
+  Rcpp::List objP = getobjP(Cova, yMat, muMat, iRMat);
   
-  Rcpp::List adjGList = outputadjGFast_v1(GVec, objP, RPsiR);
-  arma::mat adjGMat = adjGList["adjGMat"];
-  double Stat = adjGList["Stat"];
-  double VarW = adjGList["VarW"];
-  double VarP = getVarP(adjGMat, excludechr);
-  
-  VarOut(0) = AF;
-  VarOut(1) = Stat;
-  VarOut(2) = VarW;
-  VarOut(3) = VarP;
-  VarOut(4) = VarP/VarW;
-  return(VarOut);
-}
-
-arma::mat nullModelClass::getVarRatio(arma::mat GMatRatio,
-                                      Rcpp::List objP)
-{
   arma::vec GVec(n);
   arma::rowvec VarOneSNP(5);
   
   arma::mat VarRatioMat(nSNPsVarRatio, 5);
   arma::mat newVarRatio(10, 5);
   
-  // Rcpp::List adjGList = outputadjGFast(GVec, objP);
-  
   int index = 0;
   int indexTot = 0;
   while(index < nSNPsVarRatio){
-    indexTot++;
     GVec = GMatRatio.col(index);
     VarOneSNP = getVarOneSNP(GVec, "n", objP);
     VarRatioMat.row(index) = VarOneSNP;
     index++;
+    indexTot++;
   }
   
   arma::vec VarRatio = VarRatioMat.col(4);
@@ -896,7 +904,7 @@ arma::mat nullModelClass::getVarRatio(arma::mat GMatRatio,
   cout << "nSNPs for CV: " << index << endl;
   cout << "CV: " << CV << endl;
   
-  while(CV > CVcutoff && VarRatioMat.n_rows < 100){
+  while(CV > CVcutoff && VarRatioMat.n_rows <= 100){
     int indexTemp = 0;
     while(indexTemp < 10){
       indexTot++;
@@ -916,9 +924,9 @@ arma::mat nullModelClass::getVarRatio(arma::mat GMatRatio,
 }
 
 arma::mat nullModelClass::getVarRatio(std::vector<int> indexSNPs,
-                                      string excludechr,
-                                      Rcpp::List objP)
+                                      string excludechr)
 {
+  Rcpp::List objP = getobjP(Cova, yMat, muMat, iRMat);
   arma::vec alleleFreqVec = ptrGeno->getalleleFreqVec();
   
   arma::vec GVec(n);
@@ -927,9 +935,6 @@ arma::mat nullModelClass::getVarRatio(std::vector<int> indexSNPs,
   arma::mat VarRatioMat(nSNPsVarRatio, 5);
   arma::mat newVarRatio(10, 5);
   
-  // Rcpp::List adjGList = outputadjGFast(GVec, objP);
-  arma::cube RPsiR = getRPsiR_v1(objP["muMat"], objP["iRMat"], objP["n"], objP["J"]);
-  
   int index = 0;
   int indexTot = 0;
   while(index < nSNPsVarRatio){
@@ -937,8 +942,7 @@ arma::mat nullModelClass::getVarRatio(std::vector<int> indexSNPs,
     indexTot++;
     if(alleleFreqVec(m) > minMafVarRatio && alleleFreqVec(m) < 1-minMafVarRatio){
       ptrGeno->getOneMarker(m, 0, &GVec);
-      // VarOneSNP = getVarOneSNP(GVec, excludechr, objP);
-      VarOneSNP = getVarOneSNP_v1(GVec, excludechr, objP, RPsiR);
+      VarOneSNP = getVarOneSNP(GVec, excludechr, objP);
       VarRatioMat.row(index) = VarOneSNP;
       index++;
     }
@@ -956,8 +960,7 @@ arma::mat nullModelClass::getVarRatio(std::vector<int> indexSNPs,
       indexTot++;
       if(alleleFreqVec(m) > minMafVarRatio && alleleFreqVec(m) < 1-minMafVarRatio){
         ptrGeno->getOneMarker(m, 0, &GVec);
-        // VarOneSNP = getVarOneSNP(GVec, excludechr, objP);
-        VarOneSNP = getVarOneSNP_v1(GVec, excludechr, objP, RPsiR);
+        VarOneSNP = getVarOneSNP(GVec, excludechr, objP);
         newVarRatio.row(indexTemp) = VarOneSNP;
         index++;
         indexTemp++;
@@ -978,14 +981,12 @@ Rcpp::List nullModelClass::getLOCO(string excludechr,
   // estimate LOCO parameter
   updateParaConv(excludechr);
   
-  // get a list for p value calculation in step 2
-  Rcpp::List objP = getobjP();
-  
   // output variance matrix
-  arma::mat VarRatioMat = getVarRatio(indexSNPs, excludechr, objP);
+  arma::mat VarRatioMat = getVarRatio(indexSNPs, excludechr);
   double VarRatio = arma::mean(VarRatioMat.col(4));
   
-  Rcpp::List outLOCO = List::create(Named("objP")=objP,
+  Rcpp::List outLOCO = List::create(Named("muMat")=muMat,
+                                    Named("iRMat")=iRMat,
                                     Named("VarRatioMat")=VarRatioMat,
                                     Named("VarRatio")=VarRatio);
   return(outLOCO);
@@ -996,7 +997,7 @@ void nullModelClass::setNullModel(arma::mat CovaR,
                                   genoClass* ptrGenoInput,
                                   arma::vec betaR,
                                   arma::vec bVecR,
-                                  arma::vec epsR,
+                                  arma::vec epsR,           // 
                                   double tauR,
                                   arma::mat GMatRatioR,
                                   Rcpp::List controlListR)
@@ -1007,7 +1008,7 @@ void nullModelClass::setNullModel(arma::mat CovaR,
   M = ptrGenoInput->getM();
   
   Cova = CovaR;
-  CovaMat = getCovaMat();
+  CovaMat = getCovaMat(Cova, n, J, p);
   yVec = yVecR;
   yMat = getyMat();
   ptrGeno = ptrGenoInput;
@@ -1029,26 +1030,13 @@ void nullModelClass::setNullModel(arma::mat CovaR,
   getTraceRandMat();
 }
 
-arma::mat nullModelClass::getCovaMat()
-{
-  arma::mat CovaMat(n*(J-1), p);
-  int index = 0;
-  for(int i = 0; i < n; i++){
-    for(int j = 0; j < J-1; j++){
-      CovaMat.row(index) = Cova.row(i);
-      index++;
-    }
-  }
-  return(CovaMat);
-}
 
 // yMat: matrix with dim of n x J
 arma::mat nullModelClass::getyMat()
 {
   arma::mat yMat(n, J, arma::fill::zeros);
-  for(int i = 0; i < n; i++){
+  for(int i = 0; i < n; i++)
     yMat(i, yVec(i)-1) = 1;
-  }
   return(yMat);
 }
 
@@ -1104,7 +1092,7 @@ void nullModelClass::getTraceRandMat()
   }
 }
 
-// convert from n(J-1) to n by summing up each (J-1) elements
+// sum up each (J-1) elements: n(J-1) x 1 -> n x 1
 arma::vec nullModelClass::ZMat(arma::vec xVec)
 {
   arma::vec y1Vec(n, arma::fill::zeros);
@@ -1118,7 +1106,7 @@ arma::vec nullModelClass::ZMat(arma::vec xVec)
   return(y1Vec);
 }
 
-// convert from n to n(J-1) by duplicating each element for (J-1) times
+// duplicate each element for (J-1) times: n x 1 -> n(J-1) x 1 
 arma::vec nullModelClass::tZMat(arma::vec xVec)
 {
   arma::vec y1Vec(n*(J-1));
@@ -1135,17 +1123,15 @@ arma::vec nullModelClass::tZMat(arma::vec xVec)
 
 void nullModelClass::updateTau()
 {
-  arma::vec YVec = convert1(YMat);
+  arma::vec YVec = convert1(YMat, n, J);
   getPCGofSigmaAndCovaMat(CovaMat, iSigma_CovaMat, "n");
   getPCGofSigmaAndVector(YVec, iSigma_YVec, "n"); 
-  arma::mat Cova_iSigma_CovaMat = CovaMat.t() * iSigma_CovaMat;
-  arma::vec Cova_iSigma_YVec = CovaMat.t() * iSigma_YVec;
-  arma::mat iSigmaXXiSigmaX = iSigma_CovaMat * inv(Cova_iSigma_CovaMat);
-  arma::vec PYVec = iSigma_YVec - iSigmaXXiSigmaX * Cova_iSigma_YVec;
+  iSigmaX_XSigmaX = iSigma_CovaMat * inv(CovaMat.t() * iSigma_CovaMat);
+  arma::vec PYVec = iSigma_YVec - iSigmaX_XSigmaX * (CovaMat.t() * iSigma_YVec);
   arma::vec VPYVec = tZMat(getKinbVec(ZMat(PYVec), ptrGeno, "n"));
-  getPCGofSigmaAndVector(VPYVec, iSigma_VPYVec, "n"); 
-  arma::vec Cova_iSigma_VPYVec = CovaMat.t() * iSigma_VPYVec;
-  arma::vec PVPYVec = iSigma_VPYVec - iSigmaXXiSigmaX * Cova_iSigma_VPYVec;
+  
+  getPCGofSigmaAndVector(VPYVec, iSigma_VPYVec, "n");
+  arma::vec PVPYVec = iSigma_VPYVec - iSigmaX_XSigmaX * (CovaMat.t() * iSigma_VPYVec);
   double YPVPY = as_scalar(YVec.t() * PVPYVec);
   double YPVPVPY = as_scalar(VPYVec.t() * PVPYVec);
   // The below is to calculate trace
@@ -1154,7 +1140,7 @@ void nullModelClass::updateTau()
   int m = TraceRandMat.n_cols;
   for(int i = 0; i < m; i++){
     arma::vec iSigma_V_TRM_col = iSigma_V_TRM.col(i);
-    arma::vec P_V_TRM_col = iSigma_V_TRM_col - iSigmaXXiSigmaX * (CovaMat.t() * iSigma_V_TRM_col);
+    arma::vec P_V_TRM_col = iSigma_V_TRM_col - iSigmaX_XSigmaX * (CovaMat.t() * iSigma_V_TRM_col);
     tracePV += as_scalar(TraceRandMat.col(i).t() * P_V_TRM_col);
   }
   tracePV /= m;
@@ -1298,13 +1284,14 @@ void nullModelClass::updateEpsOneStep()
 void nullModelClass::updatePara(string excludechr)
 {
   getPCGofSigmaAndCovaMat(CovaMat, iSigma_CovaMat, excludechr);
-  arma::vec YVec = convert1(YMat);
+  arma::vec YVec = convert1(YMat, n, J);
   getPCGofSigmaAndVector(YVec, iSigma_YVec, excludechr); 
   
   // update beta
-  arma::mat Cova_iSigma_CovaMat = CovaMat.t() * iSigma_CovaMat;
+  arma::mat XSigmaX = inv(CovaMat.t() * iSigma_CovaMat);
   arma::vec Cova_iSigma_YVec = CovaMat.t() * iSigma_YVec;
-  beta = inv(Cova_iSigma_CovaMat) * Cova_iSigma_YVec;
+  beta = XSigmaX * Cova_iSigma_YVec;
+  iSigmaX_XSigmaX = iSigma_CovaMat * XSigmaX;
   
   // update bVec
   arma::vec Z_iSigma_YVec = ZMat(iSigma_YVec);
@@ -1331,8 +1318,8 @@ void nullModelClass::getPCGofSigmaAndVector(arma::vec y1Vec,    // vector with l
                                             arma::vec& xVec,   // vector with length of n(J-1)
                                             string excludechr)
 {
-  arma::mat xMat = convert2(xVec);
-  arma::mat y1Mat = convert2(y1Vec);
+  arma::mat xMat = convert2(xVec, n, J);
+  arma::mat y1Mat = convert2(y1Vec, n, J);
   // r2Vec and z2Vec are for the current step; r1Vec and z1Vec are for the previous step
   int iter = 0;
   arma::mat r2Mat = y1Mat - getSigmaxMat(xMat, excludechr);  // n x (J-1): r0 = y1Mat- Sigma %*% xMat
@@ -1376,7 +1363,8 @@ void nullModelClass::getPCGofSigmaAndVector(arma::vec y1Vec,    // vector with l
     }
   }
   
-  xVec = convert1(xMat);
+  xVec = convert1(xMat, n, J);
+  Rcpp::checkUserInterrupt();
   if (iter >= maxiterPCG){
     cout << "pcg did not converge. You may increase maxiter number." << endl;
   }
@@ -1419,36 +1407,10 @@ arma::cube nullModelClass::getInvBlockDiagSigma()
   return(InvBlockDiagSigma);
 }
 
-// convert from n x (J-1) matrix to n(J-1) vector
-arma::vec nullModelClass::convert1(arma::mat xMat) // matrix with dim of n x (J-1)
-{
-  arma::vec xVec(n*(J-1));
-  int index = 0;
-  for(int i = 0; i < n; i++){
-    for(int j = 0; j < J-1; j++){
-      xVec(index) = xMat(i,j);
-      index++;
-    }
-  }
-  return(xVec);
-}
 
-// convert n(J-1) vector to n x (J-1) matrix
-arma::mat nullModelClass::convert2(arma::vec xVec) 
-{
-  arma::mat xMat(n,(J-1));
-  int index = 0;
-  for(int i = 0; i < n; i++){
-    for(int j = 0; j < J-1; j++){
-      xMat(i,j) = xVec(index);
-      index++;
-    }
-  }
-  return(xMat);
-}
 
 // yMat1 = Sigma %*% xMat
-arma::mat nullModelClass::getSigmaxMat(arma::mat xMat,   // matrix with dim of n x (J-1)
+arma::mat nullModelClass::getSigmaxMat(arma::mat xMat,   // matrix: n x (J-1) 
                                        string excludechr)
 {
   arma::mat iR_xMat = iRMat % xMat;
@@ -1463,6 +1425,7 @@ arma::mat nullModelClass::getSigmaxMat(arma::mat xMat,   // matrix with dim of n
   return(yMat1);
 }
 
+// sum for each row: n1 x n2 matrix -> n1 x 1 vector
 arma::vec nullModelClass::getRowSums(arma::mat xMat)
 {
   int n1 = xMat.n_rows;
@@ -1483,7 +1446,7 @@ Rcpp::List nullModelClass::getNullModel()
                                     Named("M")=M,              // number of SNPs in Plink file
                                     Named("controlList")=controlList,
                                     Named("eta")=eta,          // X %*% beta + bVec
-                                    Named("yVec")=yVec,        // matrix with dim of n x J: observation
+                                    Named("yVec")=yVec,        // matrix with dim of n x 1: observation
                                     Named("Cova")=Cova,        // matrix with dim of n(J-1) x p: covariates
                                     Named("muMat")=muMat,      // matrix with dim of n x J: probability
                                     Named("YMat")=YMat,        // matrix with dim of n x (J-1): working variables
@@ -1495,6 +1458,7 @@ Rcpp::List nullModelClass::getNullModel()
   
   return(outList);
 }
+
 
 
 ////////////////// main function //////////////

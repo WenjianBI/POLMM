@@ -81,7 +81,7 @@ POLMM_Null_Model = function(formula,
   if(length(obj.clm$alpha)==1)
     stop("Number of response levels should be >= 3.")
   
-  # incorporate an intercept and then fix the first eps as 0
+  # incorporate an intercept term and fix the first cutpoint (eps) as 0
   beta = c(-1 * obj.clm$alpha[1], obj.clm$beta)   
   eps = c(0, obj.clm$alpha[-1] - obj.clm$alpha[1])
   
@@ -110,7 +110,7 @@ POLMM_Null_Model = function(formula,
     }
   }
   
-  # usually the following conditions will not happen
+  # the following conditions usually do not happen
   if(colnames(Cova)[1] != "(Intercept)")
     stop("colnames(Cova)[1] should be (intercept)!!")
   if(any(colnames(Cova)[-1] != names(obj.clm$beta)))
@@ -246,7 +246,7 @@ updateCtrl = function(control.new){
 #' 
 #' head(outPOLMM)
 #' round(as.numeric(outPOLMM$pval.spa),2)
-#' 0.90 0.47 0.83 0.71 0.34 0.30 0.20 0.82 0.25 0.71
+#' ## 0.90 0.47 0.83 0.71 0.34 0.30 0.20 0.82 0.25 0.71
 
 POLMM = function(GMat,            # n x m matrix
                  obj_Null,
@@ -262,8 +262,8 @@ POLMM = function(GMat,            # n x m matrix
   
   if(is.null(subjIDs) | is.null(SNPIDs))
     stop("rownames and colnames of GMat are required!")
-  if(any(duplicated(subjIDs)) | any(duplicated(SNPIDs)))
-    stop("all elements of either subjIDs or SNPIDs should be unique!")
+  if(any(duplicated(subjIDs)))
+    stop("all elements of rownames(GMat) should be unique!")
   
   subjIDs_Null = obj_Null$subjIDs
   subjPos = match(subjIDs_Null, subjIDs, 0)
@@ -296,12 +296,17 @@ POLMM = function(GMat,            # n x m matrix
   cat("Totally", m, "markers to analyze!!\n")
   
   uniq_chr = unique(chrVec)
+  J = ncol(obj_Null$muMat)
+  yMat = getyMatR(obj_Null$yVec, n, J)
+  
   OutMat = c()
   for(chr in uniq_chr){
     r = obj_Null$LOCOList[[chr]]$VarRatio
-    objP = obj_Null$LOCOList[[chr]]$objP
+    muMat = obj_Null$LOCOList[[chr]]$muMat
+    iRMat = obj_Null$LOCOList[[chr]]$iRMat
+    objP = getobjP(obj_Null$Cova, yMat, muMat, iRMat)
+    
     pos = which(chrVec == uniq_chr)
-    RPsiR = getRPsiR_v1(objP[["muMat"]], objP[["iRMat"]], objP[["n"]], objP[["J"]])
     for(i in pos){
       GVec = GMat[,i]
       SNPID = colnames(GMat)[i]
@@ -310,7 +315,7 @@ POLMM = function(GMat,            # n x m matrix
       if(MAF < minMAF)
         next
       ## 
-      adjG = outputadjGFast_v1(GVec, objP, RPsiR)
+      adjG = outputadjGFast(GVec, objP)
       adjGMat = adjG$adjGMat
       Stat = adjG$Stat
       VarW = adjG$VarW
@@ -319,7 +324,7 @@ POLMM = function(GMat,            # n x m matrix
       pval.spa = pval.norm = 2*pnorm(-1*z, lower.tail=T)
       if(z > SPAcutoff){   
         pval.spa = Saddle_Prob(Stat, VarP, VarW,
-                               adjGMat, objP[["muMat"]], objP[["iRMat"]])   # n x (J-1)
+                               adjGMat, muMat, iRMat)   # n x (J-1)
       }
       OutMat = rbind(OutMat,
                      c(SNPID, chr, MAF, Stat, VarW, VarP, pval.norm, pval.spa))

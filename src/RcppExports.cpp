@@ -6,6 +6,33 @@
 
 using namespace Rcpp;
 
+// getyMatR
+arma::mat getyMatR(arma::mat yVec, int n, int J);
+RcppExport SEXP _POLMM_getyMatR(SEXP yVecSEXP, SEXP nSEXP, SEXP JSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< arma::mat >::type yVec(yVecSEXP);
+    Rcpp::traits::input_parameter< int >::type n(nSEXP);
+    Rcpp::traits::input_parameter< int >::type J(JSEXP);
+    rcpp_result_gen = Rcpp::wrap(getyMatR(yVec, n, J));
+    return rcpp_result_gen;
+END_RCPP
+}
+// getobjP
+Rcpp::List getobjP(arma::mat Cova, arma::mat yMat, arma::mat muMat, arma::mat iRMat);
+RcppExport SEXP _POLMM_getobjP(SEXP CovaSEXP, SEXP yMatSEXP, SEXP muMatSEXP, SEXP iRMatSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< arma::mat >::type Cova(CovaSEXP);
+    Rcpp::traits::input_parameter< arma::mat >::type yMat(yMatSEXP);
+    Rcpp::traits::input_parameter< arma::mat >::type muMat(muMatSEXP);
+    Rcpp::traits::input_parameter< arma::mat >::type iRMat(iRMatSEXP);
+    rcpp_result_gen = Rcpp::wrap(getobjP(Cova, yMat, muMat, iRMat));
+    return rcpp_result_gen;
+END_RCPP
+}
 // outputadjGFast
 Rcpp::List outputadjGFast(arma::vec GVec, Rcpp::List objP);
 RcppExport SEXP _POLMM_outputadjGFast(SEXP GVecSEXP, SEXP objPSEXP) {
@@ -15,33 +42,6 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< arma::vec >::type GVec(GVecSEXP);
     Rcpp::traits::input_parameter< Rcpp::List >::type objP(objPSEXP);
     rcpp_result_gen = Rcpp::wrap(outputadjGFast(GVec, objP));
-    return rcpp_result_gen;
-END_RCPP
-}
-// getRPsiR_v1
-arma::cube getRPsiR_v1(arma::mat muMat, arma::mat iRMat, int n, int J);
-RcppExport SEXP _POLMM_getRPsiR_v1(SEXP muMatSEXP, SEXP iRMatSEXP, SEXP nSEXP, SEXP JSEXP) {
-BEGIN_RCPP
-    Rcpp::RObject rcpp_result_gen;
-    Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< arma::mat >::type muMat(muMatSEXP);
-    Rcpp::traits::input_parameter< arma::mat >::type iRMat(iRMatSEXP);
-    Rcpp::traits::input_parameter< int >::type n(nSEXP);
-    Rcpp::traits::input_parameter< int >::type J(JSEXP);
-    rcpp_result_gen = Rcpp::wrap(getRPsiR_v1(muMat, iRMat, n, J));
-    return rcpp_result_gen;
-END_RCPP
-}
-// outputadjGFast_v1
-Rcpp::List outputadjGFast_v1(arma::vec GVec, Rcpp::List objP, arma::cube RPsiR);
-RcppExport SEXP _POLMM_outputadjGFast_v1(SEXP GVecSEXP, SEXP objPSEXP, SEXP RPsiRSEXP) {
-BEGIN_RCPP
-    Rcpp::RObject rcpp_result_gen;
-    Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< arma::vec >::type GVec(GVecSEXP);
-    Rcpp::traits::input_parameter< Rcpp::List >::type objP(objPSEXP);
-    Rcpp::traits::input_parameter< arma::cube >::type RPsiR(RPsiRSEXP);
-    rcpp_result_gen = Rcpp::wrap(outputadjGFast_v1(GVec, objP, RPsiR));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -67,9 +67,9 @@ END_RCPP
 }
 
 static const R_CallMethodDef CallEntries[] = {
+    {"_POLMM_getyMatR", (DL_FUNC) &_POLMM_getyMatR, 3},
+    {"_POLMM_getobjP", (DL_FUNC) &_POLMM_getobjP, 4},
     {"_POLMM_outputadjGFast", (DL_FUNC) &_POLMM_outputadjGFast, 2},
-    {"_POLMM_getRPsiR_v1", (DL_FUNC) &_POLMM_getRPsiR_v1, 4},
-    {"_POLMM_outputadjGFast_v1", (DL_FUNC) &_POLMM_outputadjGFast_v1, 3},
     {"_POLMM_fitNullcpp", (DL_FUNC) &_POLMM_fitNullcpp, 10},
     {NULL, NULL, 0}
 };

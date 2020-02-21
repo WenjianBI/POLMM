@@ -60,5 +60,5 @@ outPOLMM = POLMM(GMat, objNull, "1", 0.001)
 
 head(outPOLMM)
 round(as.numeric(outPOLMM$pval.spa),2)
-0.90 0.47 0.83 0.71 0.34 0.30 0.20 0.82 0.25 0.71
+## 0.90 0.47 0.83 0.71 0.34 0.30 0.20 0.82 0.25 0.71
 }
