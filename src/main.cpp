@@ -244,7 +244,7 @@ arma::vec getadjGFast(arma::vec GVec,
                       int n, int J, int p)
 {
   // arma::mat adjGMat(n, J-1);
-  arma::vec adjGVec(n);
+  // arma::vec adjGVec(n);
   
   // To increase computational efficiency when lots of GVec elements are 0
   arma::vec XR_Psi_RG1(p, arma::fill::zeros);
@@ -254,15 +254,16 @@ arma::vec getadjGFast(arma::vec GVec,
     }
   }
   
-  arma::vec TempVec = XXR_Psi_RX_new * XR_Psi_RG1;   // n x 1
+  arma::vec adjGVec = GVec - XXR_Psi_RX_new * XR_Psi_RG1;
+  // arma::vec TempVec = XXR_Psi_RX_new * XR_Psi_RG1;   // n x 1
   // int index = 0;
-  for(int i = 0; i < n; i++){
-    adjGVec(i) = GVec(i) - TempVec(i);
+  // for(int i = 0; i < n; i++){
+    // adjGVec(i) = GVec(i) - TempVec(i);
     // for(int j = 0; j < J-1; j++){
     //   adjGMat(i,j) = GVec(i) - TempVec(index);
     //   index++;
     // }
-  }
+  // }
   // return(adjGMat);
   return(adjGVec);
 }
@@ -1137,6 +1138,7 @@ arma::vec nullModelClass::tZMat(arma::vec xVec)
 
 void nullModelClass::updateTau()
 {
+  cout << "Start updating tau..." << endl;
   arma::vec YVec = convert1(YMat, n, J);
   getPCGofSigmaAndCovaMat(CovaMat, iSigma_CovaMat, "n");
   getPCGofSigmaAndVector(YVec, iSigma_YVec, "n"); 
@@ -1245,6 +1247,7 @@ void nullModelClass::updateParaConv(string excludechr)
     iter++;
     
     diffBeta = max(abs(beta - beta0)/(abs(beta) + abs(beta0) + tolBeta));
+    cout << "diffBeta:\t" << diffBeta << endl;
     if(diffBeta < tolBeta)
       break;
   }

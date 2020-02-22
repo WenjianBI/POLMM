@@ -140,6 +140,7 @@ POLMM_Null_Model = function(formula,
     stop("colnames(Cova)[-1] should be the same as names(obj.clm$beta)")
   
   control = updateCtrl(control);
+  print(control)
   if(control$LOCO == FALSE)
   {
     if(missing(GMatRatio))
@@ -327,20 +328,30 @@ POLMM = function(GMat,            # n x m matrix
     muMat = obj_Null$LOCOList[[chr]]$muMat
     iRMat = obj_Null$LOCOList[[chr]]$iRMat
     objP = getobjP(obj_Null$Cova, yMat, muMat, iRMat)
+    ##
+    XXR_Psi_RX_new = objP[["XXR_Psi_RX_new"]]
+    XR_Psi_R_new = objP[["XR_Psi_R_new"]]
+    RymuVec = objP[["RymuVec"]]
+    RPsiR = objP[["RPsiR"]]
+    ##
     
     pos = which(chrVec == uniq_chr)
     for(i in pos){
       GVec = GMat[,i]
       SNPID = colnames(GMat)[i]
       AF = mean(GVec)/2
-      MAF = ifelse(AF < 0.5, AF, 1-AF)
+      if(AF < 0.5){
+        MAF = 1 - AF;
+        GVec = 2 - GVec
+      }
       if(MAF < minMAF)
         next
       ## 
-      adjG = outputadjGFast(GVec, objP)
-      adjGVec = adjG$adjGVec
-      Stat = adjG$Stat
-      VarW = adjG$VarW
+      posG = which(GVec!=0)
+      XR_Psi_RG1 = XR_Psi_R_new[,posG] %*% GVec[posG]
+      adjGVec = GVec - XXR_Psi_RX_new %*% XR_Psi_RG1
+      Stat = sum(adjGVec * RymuVec)
+      VarW = sum(RPsiR * adjGVec^2)
       VarP = VarW * r
       z = abs(Stat)/sqrt(VarP)
       pval.spa = pval.norm = 2*pnorm(-1*z, lower.tail=T)
@@ -516,8 +527,5 @@ Saddle_Prob = function(Stat,
   
   return(pval)
 }
-
-
-
 
 
