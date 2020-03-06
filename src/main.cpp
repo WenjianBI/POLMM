@@ -6,6 +6,7 @@
 
 #include <vector>
 #include <cmath>
+#include <sys/time.h>
 #include <RcppArmadilloExtensions/sample.h> // sample
 
 using namespace std;
@@ -42,8 +43,31 @@ double calCV(arma::vec xVec){
   return(CV);
 }
 
-double get_cpu_time(){
-  return (double)clock() / CLOCKS_PER_SEC;
+arma::vec getTime(){
+  arma::vec Time(2, arma::fill::zeros);
+  struct timeval time;
+  if(gettimeofday(&time,NULL)){
+    Time(0) = 0;
+  }else{
+    Time(0) = (double)time.tv_sec + (double)time.tv_usec * .000001;
+  }
+  Time(1) = (double)clock() / CLOCKS_PER_SEC;
+  return Time; 
+}
+
+void printTime(arma::vec t1, arma::vec t2, std::string message){
+  double wallTime = t2(0) - t1(0);
+  double cpuTime = t2(1) - t1(1);
+  if(cpuTime < 60){
+    Rprintf ("It took %f seconds (%f CPU seconds) to %s.\n", 
+             wallTime, cpuTime, message.c_str());
+  }else if(cpuTime < 3600){
+    Rprintf ("It took %f minutes (%f CPU minutes) to %s.\n", 
+             wallTime/60, cpuTime/60, message.c_str());
+  }else{
+    Rprintf ("It took %f hours (%f CPU hours) to %s.\n", 
+             wallTime/3600, cpuTime/3600, message.c_str());
+  }
 }
 
 // C++ version of which(). Note: start from 0, not 1 
@@ -283,7 +307,7 @@ Rcpp::List outputadjGFast(arma::vec GVec,
 }
 
 
-arma::Mat<int> makeChrIdx(string excludeChr, vector<string> chrVecParallel, size_t M){
+arma::Mat<int> makeChrIdx(string excludeChr, vector<string> chrVecParallel, int M){
   if(excludeChr=="n"){
     arma::Mat<int> ChrIdx(1,2);
     ChrIdx(0,0) = 0;
@@ -327,34 +351,34 @@ private:
   const static unsigned char MISSING = 0x1;  // 0b01 ;
   
   // Basic information
-  size_t M;                         // number of markers
-  size_t N,N_Old;                   // number of samples, after and before filt
-  size_t numArrays;                 // make arrays to store genotype data to avoid large continuous memory usage
-  size_t numMarkersofEachArray;
-  size_t numMarkersofLastArray;
-  size_t numBytesofEachMarker;
-  size_t numBytesofEachMarker_Old; 
-  size_t numBytesReserve;
+  int M;                         // number of markers
+  int N,N_Old;                   // number of samples, after and before filt
+  int numArrays;                 // make arrays to store genotype data to avoid large continuous memory usage
+  int numMarkersofEachArray;
+  int numMarkersofLastArray;
+  int numBytesofEachMarker;
+  int numBytesofEachMarker_Old; 
+  double numBytesReserve;   // unit: Gb
   
   // input file stream of .bed file
   ifstream ibedfile;  
   int bufferG1;
   unsigned char bufferG4;
   arma::vec OneMarkerG1;
-  arma::vec OneMarkerG1_Old;
-  std::vector<unsigned char> OneMarkerG4_Old;
+  arma::vec OneMarkerG1_Old;                   // a double vector: each element (1 byte) for 4 genotypes (4 samples)
+  std::vector<unsigned char> OneMarkerG4_Old;  // a char vector: each element (1 byte) for 4 genotypes (4 samples)
   arma::vec DiagStdGeno;
   
   std::vector< std::vector<unsigned char>* > genoVecofPointers;
   
   // set environment
-  void openPlink(string, arma::vec);
+  void openPlink(string, arma::ivec);
   void setChrVec(string, Rcpp::StringVector&, vector<string>&);
   void setArrays(float);
-  void readFile(string, size_t&, string);
-  float getOneMarkerPlink(vector<unsigned char>&, arma::vec);
+  int readFile(string, string);
+  double getOneMarkerPlink(vector<unsigned char>&, arma::ivec);
   void setOneMarkerArray(int);
-  float getinvStd(float);
+  double getinvStd(double);
   void setDiagStdGeno();
   
   arma::vec alleleFreqVec; 
@@ -368,23 +392,25 @@ private:
   }
   
   // extract geno (0,1,2,3) at specific pos (0,1,2,3) of address c (1 byte)  
-  void getGenotype(unsigned char c, const int pos, int& geno) {
-    geno = (c >> (pos << 1)) & 0b11; 
+  void getGenotype(unsigned char* c, const int pos, int& geno) {
+    geno = ((*c) >> (pos << 1)) & 0b11; 
   }
   
-  void setStdGenoLookUpArr(double maf, double invsd, arma::vec & stdGenoLookUpArr){
+  void setStdGenoLookUpArr(double maf, double invsd, arma::vec& stdGenoLookUpArr){
     double maf2 = 2 * maf;
-    stdGenoLookUpArr(0) = (0-maf2)*invsd;
-    stdGenoLookUpArr(1) = (1-maf2)*invsd;
-    stdGenoLookUpArr(2) = (2-maf2)*invsd;
+    stdGenoLookUpArr(0) = (2-maf2)*invsd; // HOM_ALT = 0x0;
+    stdGenoLookUpArr(1) = 0;              // MISSING = 0x1;
+    stdGenoLookUpArr(2) = (1-maf2)*invsd; // HET = 0x2;
+    stdGenoLookUpArr(3) = (0-maf2)*invsd; // HOM_REF = 0x3;
   }
-  
+
 public:
-  void setGenoObj(string, arma::vec, float);
+  void setGenoObj(string, arma::ivec, double);
   int getN(){return N;}
   int getM(){return M;}
   arma::vec getalleleFreqVec(){return alleleFreqVec;}
-  void getOneMarker(size_t, bool, arma::vec*);
+  void getOneMarkerStd(size_t, arma::vec*);
+  void getOneMarker(size_t, arma::vec*);
   arma::vec* getDiagStdGeno(){return &DiagStdGeno;}
   arma::vec getAvec(){return alleleFreqVec;}
   Rcpp::StringVector getchrVec(){return chrVec;}
@@ -393,8 +419,8 @@ public:
 
 
 void genoClass::setGenoObj(string Plink, 
-                           arma::vec posSampleInPlink, 
-                           float memoryChunk)    // unit is Gb
+                           arma::ivec posSampleInPlink, 
+                           double memoryChunk)    // unit is Gb
 {
   // Read in plink files
   openPlink(Plink, posSampleInPlink);
@@ -406,7 +432,7 @@ void genoClass::setGenoObj(string Plink,
   setArrays(memoryChunk);
   cout << "numBytesofEachMarker in Plink file:\t" << numBytesofEachMarker_Old << endl;
   cout << "numBytesofEachMarker:\t" << numBytesofEachMarker << endl;
-  cout << "numBytesReserve:\t" << numBytesReserve << endl << endl;
+  cout << "numBytesReserve:\t" << numBytesReserve << " Gb" << endl << endl;
   
   cout << "numArrays:\t" << numArrays << endl;
   cout << "numMarkersofEachArray:\t" << numMarkersofEachArray << endl;
@@ -420,8 +446,9 @@ void genoClass::setGenoObj(string Plink,
   ///////////////////////////////////////// MAIN PART //////////////////////////////
   
   // loop for all SNPs
-  float freq, invStd;
-  for(size_t m=0; m<M; m++)
+  double freq, invStd;
+  arma::vec t1  = getTime();
+  for(int m=0; m<M; m++)
   {
     ibedfile.seekg(3+numBytesofEachMarker_Old*m);
     ibedfile.read((char*)(&OneMarkerG4_Old[0]), numBytesofEachMarker_Old);
@@ -430,85 +457,68 @@ void genoClass::setGenoObj(string Plink,
     invStd = getinvStd(freq);
     alleleFreqVec[m]=freq;
     invStdVec[m]=invStd;
-    if((m+1) % 1000 == 0){
+    if((m+1) % 10000 == 0){
       cout << "Complete\t" << m+1 <<"\tSNPs!!!!" << endl;
     }
   }
   
-  cout << endl << "Complete reading data!!" << endl;
+  arma::vec t2  = getTime();
+  printTime(t1, t2, "read Plink files");
   setDiagStdGeno();
   ibedfile.close();
 }
 
-float genoClass::getinvStd(float freq)
+double genoClass::getinvStd(double freq)
 {
-  float Std = sqrt(2*freq*(1-freq));
+  double Std = sqrt(2*freq*(1-freq));
   if(Std == 0)
     return 0;
   else
     return 1/Std;
 }
 
+// oneMarkerG1 --> genoVecofPointers
 void genoClass::setOneMarkerArray(int m)
 {
   // loop for all samples
-  bufferG4=0;
-  int pos;
-  for(size_t ind=0; ind<N; ind++){
-    pos = ind%4;
+  int whichArray = m / numMarkersofEachArray;
+
+  bufferG4 = 0;
+  for(int ind=0; ind<N; ind++){
+    int posInByte = ind % 4;
     bufferG1 = OneMarkerG1[ind];
-    setGenotype(&bufferG4, pos, bufferG1);
-    if((pos==3) | (ind==(N-1))){
-      genoVecofPointers[m/numMarkersofEachArray]->push_back(bufferG4); //avoid large continuous memory usage
+    setGenotype(&bufferG4, posInByte, bufferG1);
+    if((posInByte==3) | (ind==(N-1))){
+      genoVecofPointers[whichArray]->push_back(bufferG4); // avoid large continuous memory usage
       bufferG4 = 0;
     }
   }
 }
 
-float genoClass::getOneMarkerPlink(vector<unsigned char>& OneMarkerG4_Old,
-                                   arma::vec posSampleInPlink)
+// OneMarkerG4_Old --> OneMarkerG1
+double genoClass::getOneMarkerPlink(std::vector<unsigned char>& OneMarkerG4_Old,   
+                                   arma::ivec posSampleInPlink)              // position of samples in model (start from 1)
 {
   // read in genotypes of one marker
-  for(size_t ind=0; ind< N_Old; ind++){
-    bufferG4 = OneMarkerG4_Old[ind/4];
-    getGenotype(bufferG4, ind%4, bufferG1);
-    OneMarkerG1_Old[ind] = bufferG1;
-  }
-  
-  // select samples
-  float sum=0;
+  int sum = 0;
   std::vector<int> indexNA;
-  for(size_t index=0; index<N; index++){
-    bufferG1 = OneMarkerG1_Old[posSampleInPlink[index] - 1];   // C++ start from 0
+  for(int index=0; index<N; index++){
+    int ind = posSampleInPlink[index] - 1;
+    bufferG4 = OneMarkerG4_Old[ind/4];
+    getGenotype(&bufferG4, ind%4, bufferG1); // bufferG4 -> bufferG1
     switch(bufferG1){
     case HOM_REF: break;
-    case MISSING: indexNA.push_back(index);break;
-    case HET: sum+=1;break;
-    case HOM_ALT: sum+=2;break;
+    case HET: sum+=1; break;
+    case HOM_ALT: sum+=2; break;
+    case MISSING: indexNA.push_back(index); break;
     }
     OneMarkerG1[index] = bufferG1;
   }
   
-  // genotype imputation (if needed)
+  // calculate freq, that is, twice minor allele frequency (MAF)
   int lengthNA = indexNA.size();
-  int count = N-lengthNA;
-  float freq = sum/count;  // it is actually twice allele frequency
-  if(lengthNA != 0){
-    int bestguess = round(freq);
-    unsigned char fill=0; 
-    switch(bestguess){
-    case 0: fill=HOM_REF;break;
-    case 1: fill=HET;break;
-    case 2: fill=HOM_ALT;break;
-    }
-    for(int i=0; i<lengthNA; i++){
-      OneMarkerG1[indexNA[i]]=fill;
-      // sum += fill;
-      sum += bestguess;
-      count += 1;
-    }
-    freq = sum/count;
-  }
+  int count = N - lengthNA;
+  double freq = (double)sum/(double)count;
   return freq/2;
 }
 
@@ -516,12 +526,12 @@ void genoClass::setArrays(float memoryChunk)
 {
   numBytesofEachMarker = (N+3)/4;
   numBytesofEachMarker_Old = (N_Old+3)/4;
-  numBytesReserve = numBytesofEachMarker*M+M*2;    // not sure about why M*2 is needed (2 bytes for each marker)
+  numBytesReserve = (double)(numBytesofEachMarker+2) * M / pow(10.0, 9.0);    // not sure about why M*2 is needed (2 bytes for each marker)
   numMarkersofEachArray = floor((memoryChunk*pow(10.0, 9.0))/numBytesofEachMarker);
   if(numMarkersofEachArray > M)
-    numMarkersofEachArray=M;
+    numMarkersofEachArray = M;
   numArrays = (M-1) / numMarkersofEachArray + 1;
-  numMarkersofLastArray = M - (numArrays-1)*numMarkersofEachArray;
+  numMarkersofLastArray = M - (numArrays - 1) * numMarkersofEachArray;
   
   // get binray data from plink files
   OneMarkerG4_Old.reserve(numBytesofEachMarker_Old);  
@@ -531,7 +541,7 @@ void genoClass::setArrays(float memoryChunk)
   
   // set genoVecofPointers
   genoVecofPointers.resize(numArrays);
-  for (size_t i = 0; i < numArrays-1 ; i++){
+  for (int i = 0; i < numArrays-1 ; i++){
     genoVecofPointers[i] = new vector<unsigned char>;
     genoVecofPointers[i]->reserve(numMarkersofEachArray*numBytesofEachMarker);
   }
@@ -540,27 +550,24 @@ void genoClass::setArrays(float memoryChunk)
   
   alleleFreqVec.zeros(M);
   invStdVec.zeros(M);
-  
-  // catch(std::bad_alloc& ba)
-  // {
-  //   std::cerr << "bad_alloc caught1: " << ba.what() << '\n';
-  //   exit(EXIT_FAILURE);
-  // }
 }
 
-void genoClass::openPlink(string Plink, arma::vec posSampleInPlink)
+void genoClass::openPlink(string Plink, arma::ivec posSampleInPlink)
 {
   string bimfile = Plink + ".bim";
   string famfile = Plink + ".fam";
   string bedfile = Plink + ".bed";
-  readFile(famfile, N_Old, "Error! fam file not open!");
+  N_Old = readFile(famfile, "Error! fam file not open!");
+  M = readFile(bimfile, "Error! bim file not open!");
+  N = posSampleInPlink.size();
+  
   if((max(posSampleInPlink)>N_Old) | (min(posSampleInPlink)<1)) 
     stop("posSampleInPlink should be between 1 and N");
-  readFile(bimfile, M, "Error! bim file not open!");
+  
   ibedfile.open(bedfile.c_str(), ios::binary);
   if (!ibedfile.is_open())
     stop("Error! bed file not open!");
-  N = posSampleInPlink.size();
+  
   Rcpp::StringVector chrVecTemp(M);
   chrVecParallel.resize(M);
   
@@ -583,74 +590,88 @@ void genoClass::setChrVec(string bimfile, Rcpp::StringVector& chrVecTemp, vector
   ifile.close();
 }
 
-void genoClass::readFile(string file, size_t& n, string errInfo){
-  string junk;
+int genoClass::readFile(string file, string errInfo){
   ifstream ifile;
-  size_t count=0;
-  
   ifile.open(file.c_str());
   if(!ifile.is_open())
     stop(errInfo);
+  
+  string junk;
+  int count=0;
   while(getline(ifile,junk))
     count++;
-  n = count;
+  
   ifile.close();
+  return count;
 }
 
-void genoClass::getOneMarker(size_t m, bool ifStd, arma::vec* oneMarker){
+void genoClass::getOneMarkerStd(size_t m, arma::vec* oneMarker){
   // avoid large continuous memory usage
-  int indexOvectorPointer = m / numMarkersofEachArray;
-  int markerIdxinVec = m % numMarkersofEachArray;
+  int whichArray = m / numMarkersofEachArray;
+  int posMarker = m % numMarkersofEachArray;
+  
   // set up start byte index and end byte index
-  size_t startBytesIdxinVec = numBytesofEachMarker * markerIdxinVec;
-  size_t endBytesIdxinVec = startBytesIdxinVec+numBytesofEachMarker;
-  size_t ind= 0;
+  int startBtIdx = numBytesofEachMarker * posMarker;
+  int endBtIdx = startBtIdx + numBytesofEachMarker;
+  
   // use bufferG4b to replace bufferG4 in case of parallele computation
   unsigned char bufferG4b;
-  size_t bufferG1b;
-  size_t a,b,i,j;
+  // unsigned char bufferG1b;
+  int bufferG1b;
   
-  if(ifStd){
-    arma::vec stdGenoLookUpArr(3);
-    setStdGenoLookUpArr(alleleFreqVec[m], invStdVec[m], stdGenoLookUpArr);
-    for(i=startBytesIdxinVec; i< endBytesIdxinVec; i++){
-      bufferG4b = genoVecofPointers[indexOvectorPointer]->at(i); //avoid large continuous memory usage
-      for(j=0; (j<4)&(ind<N); j++,ind++){
-        b = bufferG4b & 1 ;
-        bufferG4b = bufferG4b >> 1;
-        a = bufferG4b & 1 ;
-        bufferG4b = bufferG4b >> 1;
-        bufferG1b = 2-(a+b);
-        oneMarker->at(ind) = stdGenoLookUpArr(bufferG1b);
-      }
-    } 
-  }else{
-    for(i=startBytesIdxinVec; i< endBytesIdxinVec; i++){
-      bufferG4b = genoVecofPointers[indexOvectorPointer]->at(i); //avoid large continuous memory usage
-      for(j=0; (j<4)&(ind<N); j++,ind++){
-        b = bufferG4b & 1 ;
-        bufferG4b = bufferG4b >> 1;
-        a = bufferG4b & 1 ;
-        bufferG4b = bufferG4b >> 1;
-        bufferG1b = 2-(a+b);
-        oneMarker->at(ind) = bufferG1b;
-      }
-    } 
-  }
+  arma::vec stdGenoLookUpArr(4);
+  setStdGenoLookUpArr(alleleFreqVec[m], invStdVec[m], stdGenoLookUpArr);
+  std::vector<unsigned char>* genoPtr = genoVecofPointers[whichArray];
+  int ind = 0;
+  for(int BtIdx = startBtIdx; BtIdx < endBtIdx; BtIdx++){
+    bufferG4b = genoPtr->at(BtIdx); // unsigned char: 4 markers
+    for(unsigned char posInByte = 0; (posInByte<4) & (ind<N); posInByte++,ind++){
+      bufferG1b = (bufferG4b >> (posInByte << 1)) & 0b11;
+      oneMarker->at(ind) = stdGenoLookUpArr(bufferG1b);
+    }
+  } 
 }
+
+void genoClass::getOneMarker(size_t m, arma::vec* oneMarker){
+  // avoid large continuous memory usage
+  int whichArray = m / numMarkersofEachArray;
+  int posMarker = m % numMarkersofEachArray;
+  
+  // set up start byte index and end byte index
+  int startBtIdx = numBytesofEachMarker * posMarker;
+  int endBtIdx = startBtIdx + numBytesofEachMarker;
+  
+  // use bufferG4b to replace bufferG4 in case of parallele computation
+  unsigned char bufferG4b;
+  int bufferG1b;
+  double bufferG1c;
+  
+  int ind = 0;
+  for(int BtIdx = startBtIdx; BtIdx < endBtIdx; BtIdx++){
+    bufferG4b = genoVecofPointers[whichArray]->at(BtIdx); //avoid large continuous memory usage
+    for(int posInByte = 0; (posInByte<4) & (ind<N); posInByte++,ind++){
+      getGenotype(&bufferG4b, posInByte, bufferG1b);
+      switch(bufferG1b){
+      case HOM_REF: bufferG1c = 0; break;
+      case HET: bufferG1c = 1; break;
+      case HOM_ALT: bufferG1c = 2; break;
+      case MISSING: bufferG1c = alleleFreqVec(m); break;
+      }
+      oneMarker->at(ind) = bufferG1c;
+    }
+  } 
+}
+
 
 void genoClass::setDiagStdGeno(){
   DiagStdGeno.zeros(N);
   arma::vec oneMarker(N);
-  for(size_t m=0; m<M; m++){
-    getOneMarker(m, 1, &oneMarker);  // write Standard Genotype to OneMarkerG1
+  for(int m=0; m<M; m++){
+    getOneMarkerStd(m, &oneMarker);  // write Standard Genotype to OneMarkerG1
     DiagStdGeno = DiagStdGeno + (oneMarker) % (oneMarker);
   }
 }
 
-float innerProduct(arma::vec& x, arma::vec& y){
-  return std::inner_product(x.begin(), x.end(), y.begin(), 0.0);
-}
 
 //http://thecoatlessprofessor.com/programming/set_rs_seed_in_rcpp_sequential_case/
 void set_seed(unsigned int seed) {
@@ -659,6 +680,8 @@ void set_seed(unsigned int seed) {
   set_seed_r(seed);  
 }
 
+genoClass objG;
+
 //http://gallery.rcpp.org/articles/parallel-inner-product/
 struct getKinbVecParallel : public Worker
 {
@@ -666,37 +689,33 @@ struct getKinbVecParallel : public Worker
   arma::vec& bVec;
   unsigned int N;
   unsigned int M;
-  genoClass* ptrGeno;
   
   // product that I have accumulated
   arma::vec KinbVec;
   int counts;
   
   // constructors
-  getKinbVecParallel(arma::vec& bVec, genoClass* ptrGeno)
-    : bVec(bVec), ptrGeno(ptrGeno) 
+  getKinbVecParallel(arma::vec& bVec)
+    : bVec(bVec), counts(0) 
   {
-    M = ptrGeno->getM();
-    N = ptrGeno->getN();
+    M = objG.getM();
+    N = objG.getN();
     KinbVec.zeros(N);
-    counts = 0;
   }
   getKinbVecParallel(const getKinbVecParallel& getKinbVecParallel, Split)
-    : bVec(getKinbVecParallel.bVec), ptrGeno(getKinbVecParallel.ptrGeno)
+    : bVec(getKinbVecParallel.bVec), counts(0)
   {
     N = getKinbVecParallel.N;
     M = getKinbVecParallel.M;
     KinbVec.zeros(getKinbVecParallel.N);
-    counts = 0;
   }
   // process just the elements of the range I've been asked to
   void operator()(std::size_t begin, std::size_t end) {
     arma::vec oneMarker(N);
     for(unsigned int m = begin; m < end; m++){
-      ptrGeno->getOneMarker(m, 1, &oneMarker);
-      // KinbVec += oneMarker * innerProduct(oneMarker, bVec);
+      objG.getOneMarkerStd(m, &oneMarker);
       KinbVec += oneMarker * arma::dot(oneMarker, bVec);
-      counts++;
+      counts ++;
     }
   }
   
@@ -708,13 +727,13 @@ struct getKinbVecParallel : public Worker
 };
 
 
-arma::vec getKinbVec(arma::vec bVec, genoClass* ptrGeno, string excludeChr) {
+arma::vec getKinbVec(arma::vec& bVec, genoClass* ptrGeno, string excludeChr) {
   
   size_t M = ptrGeno->getM();
   vector<string> chrVecParallel = ptrGeno->getchrVecParallel();
   
   // declare the InnerProduct instance that takes a pointer to the vector data
-  getKinbVecParallel getKinbVecParallel(bVec, ptrGeno);
+  getKinbVecParallel getKinbVecParallel(bVec);
   
   arma::Mat<int> ChrIdx = makeChrIdx(excludeChr, chrVecParallel, M);
   // cout << "ChrIdx:" << endl << ChrIdx << endl;
@@ -723,12 +742,82 @@ arma::vec getKinbVec(arma::vec bVec, genoClass* ptrGeno, string excludeChr) {
   for(int i = 0; i < nIdx; i++){
     int idxStart = ChrIdx(i,0);
     int idxEnd = ChrIdx(i,1);
+    // cout << idxStart << "\t" << idxEnd << endl;
     // call paralleReduce to start the work
     parallelReduce(idxStart, idxEnd, getKinbVecParallel);
   }
   
   return getKinbVecParallel.KinbVec/getKinbVecParallel.counts;
 }
+
+// //http://gallery.rcpp.org/articles/parallel-inner-product/
+// struct getKinbVecParallel : public Worker
+// {
+//   // source vectors
+//   arma::vec& bVec;
+//   unsigned int N;
+//   unsigned int M;
+//   genoClass* ptrGeno;
+//   
+//   // product that I have accumulated
+//   arma::vec KinbVec;
+//   int counts;
+//   
+//   // constructors
+//   getKinbVecParallel(arma::vec& bVec, genoClass* ptrGeno)
+//     : bVec(bVec), ptrGeno(ptrGeno), counts(0) 
+//   {
+//     M = ptrGeno->getM();
+//     N = ptrGeno->getN();
+//     KinbVec.zeros(N);
+//   }
+//   getKinbVecParallel(const getKinbVecParallel& getKinbVecParallel, Split)
+//     : bVec(getKinbVecParallel.bVec), ptrGeno(getKinbVecParallel.ptrGeno), counts(0)
+//   {
+//     N = getKinbVecParallel.N;
+//     M = getKinbVecParallel.M;
+//     KinbVec.zeros(getKinbVecParallel.N);
+//   }
+//   // process just the elements of the range I've been asked to
+//   void operator()(std::size_t begin, std::size_t end) {
+//     arma::vec oneMarker(N);
+//     for(unsigned int m = begin; m < end; m++){
+//       ptrGeno->getOneMarkerStd(m, &oneMarker);
+//       KinbVec += oneMarker * arma::dot(oneMarker, bVec);
+//       counts ++;
+//     }
+//   }
+//   
+//   // join my value with that of another InnerProduct
+//   void join(const getKinbVecParallel & rhs) {
+//     KinbVec += rhs.KinbVec;
+//     counts += rhs.counts;
+//   }
+// };
+// 
+// 
+// arma::vec getKinbVec(arma::vec bVec, genoClass* ptrGeno, string excludeChr) {
+//   
+//   size_t M = ptrGeno->getM();
+//   vector<string> chrVecParallel = ptrGeno->getchrVecParallel();
+//   
+//   // declare the InnerProduct instance that takes a pointer to the vector data
+//   getKinbVecParallel getKinbVecParallel(bVec, ptrGeno);
+//   
+//   arma::Mat<int> ChrIdx = makeChrIdx(excludeChr, chrVecParallel, M);
+//   // cout << "ChrIdx:" << endl << ChrIdx << endl;
+//   
+//   int nIdx = ChrIdx.n_rows;
+//   for(int i = 0; i < nIdx; i++){
+//     int idxStart = ChrIdx(i,0);
+//     int idxEnd = ChrIdx(i,1);
+//     // cout << idxStart << "\t" << idxEnd << endl;
+//     // call paralleReduce to start the work
+//     parallelReduce(idxStart, idxEnd, getKinbVecParallel);
+//   }
+//   
+//   return getKinbVecParallel.KinbVec/getKinbVecParallel.counts;
+// }
 
 ////////////////// nullModelClass ////////////// 
 
@@ -806,6 +895,7 @@ public:
 void nullModelClass::fitNullModel()
 {
   // initial vector
+  arma::vec t1  = getTime();
   updateMats();
   
   // start iteration
@@ -858,6 +948,9 @@ void nullModelClass::fitNullModel()
                                    Named("VarRatio")=VarRatio);
     LOCOList["LOCO=F"] = temp;
   }
+  // 
+  arma::vec t2  = getTime();
+  printTime(t1, t2, "fit the null model");
 }
 
 
@@ -956,7 +1049,7 @@ arma::mat nullModelClass::getVarRatio(std::vector<int> indexSNPs,
     int m = indexSNPs[indexTot];
     indexTot++;
     if(alleleFreqVec(m) > minMafVarRatio && alleleFreqVec(m) < 1-minMafVarRatio){
-      ptrGeno->getOneMarker(m, 0, &GVec);
+      ptrGeno->getOneMarker(m, &GVec);
       VarOneSNP = getVarOneSNP(GVec, excludechr, objP);
       VarRatioMat.row(index) = VarOneSNP;
       index++;
@@ -974,7 +1067,7 @@ arma::mat nullModelClass::getVarRatio(std::vector<int> indexSNPs,
       int m = indexSNPs[indexTot]; // round double to int
       indexTot++;
       if(alleleFreqVec(m) > minMafVarRatio && alleleFreqVec(m) < 1-minMafVarRatio){
-        ptrGeno->getOneMarker(m, 0, &GVec);
+        ptrGeno->getOneMarker(m, &GVec);
         VarOneSNP = getVarOneSNP(GVec, excludechr, objP);
         newVarRatio.row(indexTemp) = VarOneSNP;
         index++;
@@ -1094,17 +1187,18 @@ void nullModelClass::setArray()
 
 void nullModelClass::getTraceRandMat()
 {
+  arma::vec t1  = getTime();
   for(int itrace = 0; itrace < tracenrun; itrace++){
-    cout << "itrace:\t" << itrace << endl;
+    
     arma::vec uVec = nb(n*(J-1));
     uVec = uVec*2 - 1;
     TraceRandMat.col(itrace) = uVec;
-    
-    double cpuin  = get_cpu_time();
-    V_TRM.col(itrace) = tZMat(getKinbVec(ZMat(uVec), ptrGeno, "n"));
-    double cpuout  = get_cpu_time();
-    cout << "CPU Time  in getKinbVec = " << cpuout - cpuin  << endl;
+    arma::vec ZuVec = ZMat(uVec);
+    V_TRM.col(itrace) = tZMat(getKinbVec(ZuVec, ptrGeno, "n"));
   }
+  
+  arma::vec t2  = getTime();
+  printTime(t1, t2, "calculate 30 getKinbVec");
 }
 
 // sum up each (J-1) elements: n(J-1) x 1 -> n x 1
@@ -1144,7 +1238,8 @@ void nullModelClass::updateTau()
   getPCGofSigmaAndVector(YVec, iSigma_YVec, "n"); 
   iSigmaX_XSigmaX = iSigma_CovaMat * inv(CovaMat.t() * iSigma_CovaMat);
   arma::vec PYVec = iSigma_YVec - iSigmaX_XSigmaX * (CovaMat.t() * iSigma_YVec);
-  arma::vec VPYVec = tZMat(getKinbVec(ZMat(PYVec), ptrGeno, "n"));
+  arma::vec ZPYVec = ZMat(PYVec);
+  arma::vec VPYVec = tZMat(getKinbVec(ZPYVec, ptrGeno, "n"));
   
   getPCGofSigmaAndVector(VPYVec, iSigma_VPYVec, "n");
   arma::vec PVPYVec = iSigma_VPYVec - iSigmaX_XSigmaX * (CovaMat.t() * iSigma_VPYVec);
@@ -1247,7 +1342,7 @@ void nullModelClass::updateParaConv(string excludechr)
     iter++;
     
     diffBeta = max(abs(beta - beta0)/(abs(beta) + abs(beta0) + tolBeta));
-    cout << "diffBeta:\t" << diffBeta << endl;
+    cout << "diffBeta:\t" << diffBeta << endl << endl;
     if(diffBeta < tolBeta)
       break;
   }
@@ -1262,9 +1357,13 @@ void nullModelClass::updateEps()
     updateEpsOneStep();
     updateMats();
     
-    diffeps = max(abs(eps - eps0));
-    if(diffeps < tolEps) break;
+    diffeps = max(abs(eps - eps0)/(abs(eps) + abs(eps0) + tolBeta));
     iter++;
+    // if(diffeps < tolEps) break;
+    if(diffeps < tolEps){
+      eps = eps0;
+      break;
+    }
   }
   cout << "UpdateEps iter: " << iter << endl;
   cout << "eps: " << endl << eps << endl;
@@ -1313,7 +1412,8 @@ void nullModelClass::updatePara(string excludechr)
   // update bVec
   arma::vec Z_iSigma_YVec = ZMat(iSigma_YVec);
   arma::vec Z_iSigma_Xbeta = ZMat(iSigma_CovaMat * beta);
-  bVec = tau * getKinbVec(Z_iSigma_YVec - Z_iSigma_Xbeta, ptrGeno, excludechr);
+  arma::vec tempVec = Z_iSigma_YVec - Z_iSigma_Xbeta;
+  bVec = tau * getKinbVec(tempVec, ptrGeno, excludechr);
 }
 
 // use PCG to calculate iSigma_xMat = Sigma^-1 %*% xMat
@@ -1388,7 +1488,7 @@ void nullModelClass::getPCGofSigmaAndVector(arma::vec y1Vec,    // vector with l
   cout << "iter from getPCG1ofSigmaAndVector " << iter << endl;
 }
 
-arma::mat nullModelClass::solverBlockDiagSigma(arma::cube& InvBlockDiagSigma,      // (J-1) x (J-1) x n
+arma::mat nullModelClass::solverBlockDiagSigma(arma::cube& InvBlockDiagSigma,   // (J-1) x (J-1) x n
                                                arma::mat& xMat)                 // n x (J-1)
 {
   arma::mat outMat(n, J-1);
@@ -1482,7 +1582,7 @@ Rcpp::List nullModelClass::getNullModel()
 
 // [[Rcpp::export]]
 Rcpp::List fitNullcpp(std::string Plink,
-                      arma::vec posSampleInPlink,
+                      arma::ivec posSampleInPlink,
                       arma::mat CovaR,
                       arma::Col<int> yVecR, // should be from 1 to J
                       arma::vec betaR,
@@ -1493,17 +1593,17 @@ Rcpp::List fitNullcpp(std::string Plink,
                       Rcpp::List controlListR)
 {
   // read in genotype from Plink file for GRM
-  genoClass obj;
+  // genoClass objG;
   float memoryChunk = controlListR["memoryChunk"];
-  obj.setGenoObj(Plink, posSampleInPlink, memoryChunk);
-  genoClass* ptrGenoInput = &obj;
+  objG.setGenoObj(Plink, posSampleInPlink, memoryChunk);
+  genoClass* ptrGenoInput = &objG;
   
   // Null model fitting
-  nullModelClass objm;
-  objm.setNullModel(CovaR, yVecR, ptrGenoInput, betaR,  bVecR,  epsR,  tauR, GMatRatioR, controlListR);
-  objm.fitNullModel();
+  nullModelClass objM;
+  objM.setNullModel(CovaR, yVecR, ptrGenoInput, betaR,  bVecR,  epsR,  tauR, GMatRatioR, controlListR);
+  // objM.fitNullModel();
   
-  Rcpp::List outList = objm.getNullModel();
+  Rcpp::List outList = objM.getNullModel();
   return(outList);
 }
 
