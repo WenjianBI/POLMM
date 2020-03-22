@@ -459,6 +459,7 @@ void genoClass::setGenoObj(string Plink,
     invStdVec[m]=invStd;
     if((m+1) % 10000 == 0){
       cout << "Complete\t" << m+1 <<"\tSNPs!!!!" << endl;
+      cout << "Freq\t" << freq << endl;
     }
   }
   
