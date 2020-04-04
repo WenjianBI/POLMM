@@ -8,7 +8,7 @@
 #' @param subjData a character vector to specify subject IDs in 'formula' and 'data'.
 #' @param subjPlink a character vector to specify subject IDs in 'PlinkFile'.
 #' @param subjMatch a logical value to indicate if subjData is the same as subjPlink. If TRUE, 'subjData' and 'subjPlink' are not needed any more. Default is FALSE.
-#' @param GMatRatio only required if control$LOCO=F. a numeric matrix with genotype of multiple markers (>= 100 markers) to calculate variance ratio (r=VarP/VarW, see 'Details' Section). Each row is for one individual (the same order as subjData) and each column is for one marker. We recommand that these markers should be uncorrelated with the markers in PlinkFile.
+#' @param GMatRatio only required if control$LOCO=F. a numeric matrix (NA for missin data) with genotype of multiple markers (>= 100 markers) to calculate variance ratio (r=VarP/VarW, see 'Details' Section). Each row is for one individual (the same order as subjData) and each column is for one marker. We recommand that these markers should be uncorrelated with the markers in PlinkFile.
 #' @param control a list of parameters for controlling the fitting process. More details can be seen in 'Details' Section.
 #' @details 
 #' Variance VarP should be used to calibrate p values. However, it is computational expensive to calculate VarP for all markers. Hence, we first estimate variance ratio r = VarP / VarW, and then calculate VarW for all markers and estimate VarP = VarW * r. 
@@ -24,18 +24,25 @@
 #' \item{maxiter: Maximum number of iterations used to fit the null POLMM [default=100].}
 #' \item{tolBeta: Positive tolerance for fixed effect coefficients; the iterations converge when |beta - beta_old| / (|beta| + |beta_old| + tolBeta) < tolBeta [default=0.001].}
 #' \item{tolTau: Positive tolerance for random effect variance component (tau); the iterations converge when |tau - tau_old| / (|tau| + |tau_old| + tolTau) < tolTau [default=0.002].}
-#' \item{tau: Initial value of variance component (tau) [default=0.5].}
+#' \item{tau: Initial value of variance component (tau) [default=0.1].}
 #' \item{maxiterPCG: Maximum number of iterations for PCG to converge [default=100].}
-#' \item{tolPCG: Positive tolerance for PCG to converge [default=1e-5].}
+#' \item{tolPCG: Positive tolerance for PCG to converge [default=1e-6].}
 #' \item{maxiterEps: Maximum number of iterations for cutpoints estimation [default=100].}
-#' \item{tolEps: Positive tolerance for cutpoints estimation to converge [default=1e-5].}
+#' \item{tolEps: Positive tolerance for cutpoints estimation to converge [default=1e-10].}
 #' \item{minMafVarRatio: Minimal value of MAF cutoff to select markers (from Plink file) to estimate variance ratio [default=0.1].}
 #' \item{nSNPsVarRatio: Initial number of selected markers to estimate variance ratio [default=20], the number will be automatically added by 10 until the coefficient of variantion (CV) of the variance ratio estimate is below CVcutoff.}
 #' \item{CVcutoff: Minimal cutoff of coefficient of variantion (CV) for variance ratio estimation [default=0.0025].}
 #' \item{LOCO: Whether to apply the leave-one-chromosome-out (LOCO) approach, if FALSE, 'GMatRatio' is required [default=TRUE].}
+#' \item{numThreads: Number of threads (CPUs) to use, default is "auto", that is, RcppParallel::defaultNumThreads() [default="auto"].}
+#' \item{stackSize: Stack size (in bytes) to use for worker threads. The default used for "auto" is 2MB on 32-bit systems and 4MB on 64-bit systems (note that this parameter has no effect on Windows) [default="auto"].}
+#' \item{grainSize: [default=1]}
+#' \item{minMafGRM: Minimal value of MAF cutoff to select markers (from Plink file) for GRM [default=0.01].}
+#' \item{maxMissingGRM: Maximal value of missing rate to select markers (from Plink file) for GRM [default=0.1].}
+#' \item{hidePCGInfo: [default=TRUE]}
+#' \item{onlyCheckTime: [default=FALSE]}
 #' }
 #' @examples 
-#' #' ## We use a Plink file with 10,000 markers and 1,000 subjects to constract GRM for demonstration. 
+#' ## We use a Plink file with 10,000 markers and 1,000 subjects to constract GRM for demonstration. 
 #' ## For real data analysis, we recommend >= 100,000 common markers (MAF > 0.05 or 0.01).
 #' ## Selection of the common markers is similar as in Principle Components Analysis (PCA).
 #' famFile = system.file("extdata", "nSNPs-10000-nsubj-1000-ext.fam", package = "POLMM")
@@ -57,7 +64,12 @@
 #'                            data=egData, PlinkFile = PlinkFile, subjData = egData$IID, subjPlink = famData$V2,
 #'                            control=list(tolTau=0.001))  # Default toTau = 0.002
 #' objNull$tau  # 0.7368
-#' 
+#'
+#' ## This is for me to check the computational efficiency
+#' objNull = POLMM_Null_Model(as.factor(outcome)~Cova1+Cova2, 
+#'                            data=egData, PlinkFile = PlinkFile, subjData = egData$IID, subjPlink = famData$V2,
+#'                            control=list(onlyCheckTime = T, numThreads = 4))  # Default nThreads = 0, that is, RcppParallel::defaultNumThreads()
+#'   
 #' @return an R object of 'POLMM_NULL' with the following elements, J is number of categories.
 #' \item{N}{Number of individuals in analysis.}
 #' \item{M}{Number of markers in Plink file.}
@@ -88,7 +100,7 @@ POLMM_Null_Model = function(formula,
     stop("Argument 'PlinkFile' is needed to specify the path to Plink binary files.\n
          Note that bed, bim and fim files should be of the same prefix and at the same directory.")
   if(missing(control)){
-    warning("The default setting of 'control' will be used.")
+    warning("The default setting of 'control' was used.")
     control = NULL;
   }
   
@@ -145,16 +157,22 @@ POLMM_Null_Model = function(formula,
   {
     if(missing(GMatRatio))
       stop("Default setting is to use Leave One Chromosome Out (control$LOCO=TRUE). If you set control$LOCO=FALSE, then you have to give a GMatRatio to estimate variance ratio r.")
+    if(class(GMatRatio)!="matrix")
+      stop("class(GMatRatio) should be a numeric matrix")
     if(nrow(GMatRatio)!=n)
       stop("nrow(GMatRatio) should == sample size.")
     if(ncol(GMatRatio)<100)
       stop("ncol(GMatRatio) should be >= 100.")
+    GMatRatio = imputeGMat(GMatRatio)
   }else{
-    GMatRatio = matrix(1,1,1)
+    GMatRatio = matrix(1,1,1) # not used 
   }
 
-  ### fit a POLMM
+  ### Check ?RcppParallel::setThreadOptions for detals about parallel setting
+  RcppParallel:::setThreadOptions(numThreads = control$numThreads, stackSize = control$stackSize)
 
+  ### fit a POLMM
+  
   obj_Null = fitNullcpp(Plink = PlinkFile,
                         posSampleInPlink = posSampleInPlink,
                         CovaR = Cova,
@@ -193,6 +211,20 @@ getData = function(mc, contrasts)
   return(list(Y = Y, X = X))
 }
 
+imputeGMat = function(GMatRatio)
+{
+  m = ncol(GMatRatio)
+  GMatOut = c()
+  for(j in 1:m){
+    GVec = as.numeric(GMatRatio[,j])
+    if(any(is.na(GVec)))
+      GVec[is.na(GVec)] = mean(GVec, na.rm = T)
+    
+    GMatOut = cbind(GMatOut, GVec)
+  }
+  return(GMatOut)
+}
+
 updateCtrl = function(control.new){
   # default setting
   control = list(memoryChunk = 2,
@@ -201,15 +233,22 @@ updateCtrl = function(control.new){
                  maxiter = 100,
                  tolBeta = 0.001,
                  tolTau = 0.002,
-                 tau = 0.5,
+                 tau = 0.1,
                  maxiterPCG = 100,
-                 tolPCG = 1e-5,
+                 tolPCG = 1e-6,
                  maxiterEps = 100,
-                 tolEps = 1e-5,
+                 tolEps = 1e-10,
                  minMafVarRatio = 0.1,
                  nSNPsVarRatio = 20,
                  CVcutoff = 0.0025,
-                 LOCO = T)
+                 LOCO = T,
+                 numThreads = "auto",
+                 stackSize = "auto",
+                 minMafGRM = 0.01,
+                 maxMissingGRM = 0.1,
+                 grainSize = 1,
+                 hidePCGInfo = T,
+                 onlyCheckTime = F)
   
   if(is.null(control.new))
     return(control)

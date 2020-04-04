@@ -46,13 +46,13 @@ BEGIN_RCPP
 END_RCPP
 }
 // fitNullcpp
-Rcpp::List fitNullcpp(std::string Plink, arma::vec posSampleInPlink, arma::mat CovaR, arma::Col<int> yVecR, arma::vec betaR, arma::vec bVecR, arma::vec epsR, double tauR, arma::mat GMatRatioR, Rcpp::List controlListR);
+Rcpp::List fitNullcpp(std::string Plink, arma::ivec posSampleInPlink, arma::mat CovaR, arma::Col<int> yVecR, arma::vec betaR, arma::vec bVecR, arma::vec epsR, double tauR, arma::mat GMatRatioR, Rcpp::List controlListR);
 RcppExport SEXP _POLMM_fitNullcpp(SEXP PlinkSEXP, SEXP posSampleInPlinkSEXP, SEXP CovaRSEXP, SEXP yVecRSEXP, SEXP betaRSEXP, SEXP bVecRSEXP, SEXP epsRSEXP, SEXP tauRSEXP, SEXP GMatRatioRSEXP, SEXP controlListRSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
     Rcpp::traits::input_parameter< std::string >::type Plink(PlinkSEXP);
-    Rcpp::traits::input_parameter< arma::vec >::type posSampleInPlink(posSampleInPlinkSEXP);
+    Rcpp::traits::input_parameter< arma::ivec >::type posSampleInPlink(posSampleInPlinkSEXP);
     Rcpp::traits::input_parameter< arma::mat >::type CovaR(CovaRSEXP);
     Rcpp::traits::input_parameter< arma::Col<int> >::type yVecR(yVecRSEXP);
     Rcpp::traits::input_parameter< arma::vec >::type betaR(betaRSEXP);
