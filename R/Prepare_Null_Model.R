@@ -45,6 +45,8 @@
 #' save(SparseGRM, file=SparseGRMFile)
 #' 
 #' ## NOTE: You can change some options such as (minMafGRM, maxMissingGRM, nPartsGRM), but keep in mind that functions getSparseGRMParallel() and getSparseGRM() should use the same change of these options.
+#' @export
+ 
 getSparseGRMParallel = function(outPrefix,
                                 chrParallel,
                                 partParallel,
@@ -146,6 +148,8 @@ getSparseGRMParallel = function(outPrefix,
 #' save(SparseGRM, file=SparseGRMFile)
 #' 
 #' ## NOTE: You can change some options such as (minMafGRM, maxMissingGRM, nPartsGRM), but keep in mind that functions getSparseGRMParallel() and getSparseGRM() should use the same change of these options.
+#' @export
+
 getSparseGRM = function(outPrefix,
                         chrVec,
                         PlinkFile,
