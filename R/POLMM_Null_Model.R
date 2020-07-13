@@ -106,6 +106,8 @@
 #' @param SparseGRM an object of class "SparseGRM", check ?getSparseGRM for more details.
 #' @param GMatRatio an object of class "GMatRatio", check ?getGMatRatio for more details. Required if control$LOCO=F.
 #' @param control a list of parameters for controlling the fitting process. Check 'Details' Section for more details.
+#' @export
+#' @import ordinal
 
 POLMM_Null_Model = function(formula,
                             data,
