@@ -6,7 +6,7 @@
 
 #include "DenseGRM.hpp"
 #include "Plink.hpp"
-#include "Subfunc.hpp"
+#include "SubFunc.hpp"
 
 namespace DenseGRM {
 
