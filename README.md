@@ -4,7 +4,7 @@ Proportional Odds Logistic Mixed Model (POLMM) for ordinal categorical data anal
 ### How to install and load this package
 
 ```{r}      
-library(devtools)  # author version: 2.2.1
+library(devtools)  # author version: 2.3.0
 install_github("WenjianBi/POLMM")
 library(POLMM)
 ?POLMM  # manual of POLMM() function with an example code
