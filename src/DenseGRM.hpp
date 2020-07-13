@@ -4,7 +4,7 @@
 
 // [[Rcpp::depends(RcppArmadillo)]]
 #include <RcppArmadillo.h>
-#include "plink.hpp"
+#include "Plink.hpp"
 
 namespace DenseGRM {
 

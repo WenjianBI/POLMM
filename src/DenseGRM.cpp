@@ -5,7 +5,7 @@
 #include <RcppArmadillo.h>
 
 #include "DenseGRM.hpp"
-#include "plink.hpp"
+#include "Plink.hpp"
 #include "subfunc.hpp"
 
 namespace DenseGRM {
