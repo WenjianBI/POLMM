@@ -27,7 +27,21 @@ getSparseGRM(
 
 \item{maxMissingGRM}{Maximal value of missing rate to select markers (from Plink files) to construct GRM.}
 
-\item{nPartsGRM}{GCTA software can split subjects to multiple parts. For UK-Biobank analysis, it is recommanded to use 250 parts. 
+\item{nPartsGRM}{GCTA software can split subjects to multiple parts. For UK-Biobank analysis, it is recommanded to use 250 parts.}
+
+\item{threadNum}{Number of threads (CPUs) to use.}
+}
+\description{
+If you prefer using a sparse GRM to adjust for sample relatedness, you need this function to get an object of 'SparseGRM'. 
+Our simulations show that using sparse GRM is almost the same reliable as using dense GRM, with a huge improvement of computational efficiency. 
+\cr\cr
+Step 1: Download GCTA software from https://cnsgenomics.com/software/gcta/#Overview; 
+\cr
+Step 2: Run getSparseGRMParallel(); 
+\cr
+Step 3: Run getSparseGRM().
+}
+\examples{
 ## First download GCTA software, then you can use the following commands
 famFile = system.file("extdata", "nSNPs-10000-nsubj-1000-ext.fam", package = "POLMM")
 PlinkFile = gsub(".fam", "", famFile)   # fam/bim/bed files should have the same prefix
@@ -52,15 +66,5 @@ for(chrParallel in chrVec){
 SparseGRM = getSparseGRM(outPrefix, chrVec, PlinkFile, nPartsGRM = nPartsGRM)
 save(SparseGRM, file=SparseGRMFile)
 
-## NOTE: You can change some options such as (minMafGRM, maxMissingGRM, nPartsGRM), but keep in mind that functions getSparseGRMParallel() and getSparseGRM() should use the same change of these options.}
-}
-\description{
-If you prefer using a sparse GRM to adjust for sample relatedness, you need this function to get an object of 'SparseGRM'. 
-Our simulations show that using sparse GRM is almost the same reliable as using dense GRM, with a huge improvement of computational efficiency. 
-\cr\cr
-Step 1: Download GCTA software from https://cnsgenomics.com/software/gcta/#Overview; 
-\cr
-Step 2: Run getSparseGRMParallel(); 
-\cr
-Step 3: Run getSparseGRM().
+## NOTE: You can change some options such as (minMafGRM, maxMissingGRM, nPartsGRM), but keep in mind that functions getSparseGRMParallel() and getSparseGRM() should use the same change of these options.
 }
