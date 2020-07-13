@@ -96,5 +96,4 @@ round(as.numeric(outPOLMM$pval.spa),2)
 
 outPOLMM = POLMM(objNull, Geno.mtx, chrVec, SPAcutoff = 0) # smaller SPAcutoff: more SNPs use saddlepoint approximation
 round(as.numeric(outPOLMM$pval.spa),2)
-
 }

@@ -27,19 +27,7 @@ getSparseGRM(
 
 \item{maxMissingGRM}{Maximal value of missing rate to select markers (from Plink files) to construct GRM.}
 
-\item{nPartsGRM}{GCTA software can split subjects to multiple parts. For UK-Biobank analysis, it is recommanded to use 250 parts.}
-}
-\description{
-If you prefer using a sparse GRM to adjust for sample relatedness, you need this function to get an object of 'SparseGRM'. 
-Our simulations show that using sparse GRM is almost the same reliable as using dense GRM, with a huge improvement of computational efficiency. 
-\cr\cr
-Step 1: Download GCTA software from https://cnsgenomics.com/software/gcta/#Overview; 
-\cr
-Step 2: Run getSparseGRMParallel(); 
-\cr
-Step 3: Run getSparseGRM().
-}
-\examples{
+\item{nPartsGRM}{GCTA software can split subjects to multiple parts. For UK-Biobank analysis, it is recommanded to use 250 parts. 
 ## First download GCTA software, then you can use the following commands
 famFile = system.file("extdata", "nSNPs-10000-nsubj-1000-ext.fam", package = "POLMM")
 PlinkFile = gsub(".fam", "", famFile)   # fam/bim/bed files should have the same prefix
@@ -47,7 +35,7 @@ gcta64File = "/net/snowwhite/home/wenjianb/gcta64"  # should download gcta first
 outPrefix = gsub("nSNPs-10000-nsubj-1000-ext.fam","SparseGRM/sp", famFile) # Dir/prefix of the output files (in step 2)
 SparseGRMFile = gsub("nSNPs-10000-nsubj-1000-ext.fam","SparseGRM.RData", famFile) # output file (in step 3)
 nPartsGRM = 2;   # nPartsGRM = 250 for UK Biobank data analysis
-chrVec = 1:22    # maybe paste0("chr",1:22), depending on the plink bim file
+chrVec = 1:4    # maybe paste0("chr",1:22), depending on the plink bim file
 
 ## Step 2:
 ## We strongly suggest parallel computing for different pairs of (chrParallel, partParallel). 
@@ -64,5 +52,15 @@ for(chrParallel in chrVec){
 SparseGRM = getSparseGRM(outPrefix, chrVec, PlinkFile, nPartsGRM = nPartsGRM)
 save(SparseGRM, file=SparseGRMFile)
 
-## NOTE: You can change some options such as (minMafGRM, maxMissingGRM, nPartsGRM), but keep in mind that functions getSparseGRMParallel() and getSparseGRM() should use the same change of these options.
+## NOTE: You can change some options such as (minMafGRM, maxMissingGRM, nPartsGRM), but keep in mind that functions getSparseGRMParallel() and getSparseGRM() should use the same change of these options.}
+}
+\description{
+If you prefer using a sparse GRM to adjust for sample relatedness, you need this function to get an object of 'SparseGRM'. 
+Our simulations show that using sparse GRM is almost the same reliable as using dense GRM, with a huge improvement of computational efficiency. 
+\cr\cr
+Step 1: Download GCTA software from https://cnsgenomics.com/software/gcta/#Overview; 
+\cr
+Step 2: Run getSparseGRMParallel(); 
+\cr
+Step 3: Run getSparseGRM().
 }

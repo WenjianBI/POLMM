@@ -122,7 +122,6 @@ getSparseGRMParallel = function(outPrefix,
 #' @param minMafGRM Minimal value of MAF cutoff to select markers (from Plink files) to construct GRM.
 #' @param maxMissingGRM Maximal value of missing rate to select markers (from Plink files) to construct GRM.
 #' @param nPartsGRM GCTA software can split subjects to multiple parts. For UK-Biobank analysis, it is recommanded to use 250 parts. 
-#' @examples 
 #' ## First download GCTA software, then you can use the following commands
 #' famFile = system.file("extdata", "nSNPs-10000-nsubj-1000-ext.fam", package = "POLMM")
 #' PlinkFile = gsub(".fam", "", famFile)   # fam/bim/bed files should have the same prefix
@@ -130,7 +129,7 @@ getSparseGRMParallel = function(outPrefix,
 #' outPrefix = gsub("nSNPs-10000-nsubj-1000-ext.fam","SparseGRM/sp", famFile) # Dir/prefix of the output files (in step 2)
 #' SparseGRMFile = gsub("nSNPs-10000-nsubj-1000-ext.fam","SparseGRM.RData", famFile) # output file (in step 3)
 #' nPartsGRM = 2;   # nPartsGRM = 250 for UK Biobank data analysis
-#' chrVec = 1:22    # maybe paste0("chr",1:22), depending on the plink bim file
+#' chrVec = 1:4    # maybe paste0("chr",1:22), depending on the plink bim file
 #' 
 #' ## Step 2:
 #' ## We strongly suggest parallel computing for different pairs of (chrParallel, partParallel). 
