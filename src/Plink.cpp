@@ -82,10 +82,10 @@ arma::mat PlinkClass::getGMat(int t_nMarker,
   int posGMat = 0;
   unsigned int i;
   for(i = 0; i < indexSNPs.size(); i ++){
-    arma::vec oneMarker = getOneMarker(i, freq, missingRate);
+    arma::vec oneMarker = getOneMarker(indexSNPs[i], freq, missingRate);
     
-    // cout << "freq is " << freq << " and missingRate is "<< missingRate << "." << endl << endl;
-    // cout << "t_minMafVarRatio is " << t_minMafVarRatio << " and t_maxMissingVarRatio is "<< t_maxMissingVarRatio << "." << endl << endl;
+    cout << "freq is " << freq << " and missingRate is "<< missingRate << "." << endl << endl;
+    cout << "t_minMafVarRatio is " << t_minMafVarRatio << " and t_maxMissingVarRatio is "<< t_maxMissingVarRatio << "." << endl << endl;
     
     if(freq >= t_minMafVarRatio && freq <= 1 - t_minMafVarRatio && missingRate <= t_maxMissingVarRatio){
       
