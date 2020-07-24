@@ -597,6 +597,7 @@ void POLMMClass::setControlList(Rcpp::List t_controlList)
   m_tracenrun = t_controlList["tracenrun"]; 
   m_seed = t_controlList["seed"];
   m_minMafVarRatio = t_controlList["minMafVarRatio"];
+  m_maxMissingVarRatio = t_controlList["maxMissingVarRatio"];
   m_nSNPsVarRatio = t_controlList["nSNPsVarRatio"];
   m_CVcutoff = t_controlList["CVcutoff"];
   m_LOCO = t_controlList["LOCO"];
