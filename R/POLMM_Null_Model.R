@@ -138,7 +138,7 @@ POLMM_Null_Model = function(formula,
   if(anyNA(obj.clm$beta))
     stop("Please check collinearity between covariates! Note that intercept term should not be explicitly incorporated.")
   if(J > 10)
-    stop("Number of response levels should be <= 10. Otherwise, we suggest using methods designed for continuous trait such as fastGWA or BOLT-LMM.")
+    stop("Number of response levels should be <= 10. Otherwise, we suggest combining some categories to reduce the number of levels.")
   
   ## incorporate an intercept term and fix the first cutpoint (eps) as 0
   beta = c(-1 * obj.clm$alpha[1], obj.clm$beta)
@@ -179,6 +179,7 @@ POLMM_Null_Model = function(formula,
     flagSparseGRM = T
     print("Argument 'SparseGRM' is specified. Will use sparse GRM!")
     if(class(SparseGRM)!="SparseGRM") stop("class(SparseGRM)!='SparseGRM'")
+    
     SparseGRM = updateSparseGRM(SparseGRM, subjData)
   }
   
@@ -306,7 +307,12 @@ updateSparseGRM = function(SparseGRM, subjData){
   names = names(SparseGRM)
   KinMatListR = list();
   
+  print("names(SparseGRM) is")
+  print(names)
   for(excludeChr in names){
+    
+    print(paste0("Updating chromosome ", excludeChr, " in 'SparseGRM' based on 'subjData'."))
+    
     tempGRM1 = SparseGRM[[excludeChr]]
     # updated on 05-14-2020
     tempGRM2 = data.frame(ID1=tempGRM1$ID2,
@@ -317,12 +323,12 @@ updateSparseGRM = function(SparseGRM, subjData){
     tempGRM = tempGRM[-1*which(duplicated(tempGRM)),]
     
     ID1 = tempGRM$ID1;
+    ID2 = tempGRM$ID2;
+    value = tempGRM$value;
     
     if(any(!is.element(subjData, ID1)))
       stop("At least one of subjects is not in SparseGRM.")
     
-    ID2 = tempGRM$ID2;
-    value = tempGRM$value;
     location1 = match(ID1, subjData);
     location2 = match(ID2, subjData);
     pos = which(!is.na(location1) & !is.na(location2))

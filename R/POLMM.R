@@ -146,7 +146,7 @@ POLMM = function(objNull,
     RPsiR = objP[["RPsiR"]]
     ##
     
-    pos = which(chrVec == uniq_chr)
+    pos = which(chrVec == chr)
     K1roots = c(0,0)
     
     for(i in pos){
