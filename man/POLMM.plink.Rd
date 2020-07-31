@@ -81,10 +81,10 @@ objNull = POLMM_Null_Model(as.factor(outcome)~Cova1+Cova2,
                            SparseGRM = SparseGRM,
                            data=egData, PlinkFile = PlinkFile, subjData = egData$IID)
                            
-## If control$seed is not changed, objNull$tau should be 0.8285
+## If control$seed is not changed, objNull$tau should be 0.8506
 objNull$tau
 
-## when using function POLMM()/POLMM.plink, argument chrVec/chrVec.plink should be from
+## when using function POLMM()/POLMM.plink(), argument chrVec/chrVec.plink should be from
 names(objNull$LOCOList)
 
 POLMM.plink(objNull, PlinkFile, outFile, 

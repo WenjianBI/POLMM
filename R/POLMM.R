@@ -51,7 +51,7 @@
 #'                            SparseGRM = SparseGRM,
 #'                            data=egData, PlinkFile = PlinkFile, subjData = egData$IID)
 #'                            
-#' ## If control$seed is not changed, objNull$tau should be 0.8285
+#' ## If control$seed is not changed, objNull$tau should be 0.8506
 #' objNull$tau
 #' 
 #' ## when using function POLMM(), argument chrVec should be from
@@ -67,7 +67,7 @@
 #' outPOLMM
 #' round(as.numeric(outPOLMM$pval.spa),2)
 #' ## [1] 0.89 0.46 0.82 0.71 0.34 0.30 0.20 0.82 0.25 0.71 # using dense GRM
-#' ## [1] 0.91 0.43 0.77 0.67 0.33 0.23 0.24 0.82 0.26 0.73 # using sparse GRM
+#' ## [1] 0.82 0.46 0.76 0.68 0.36 0.23 0.21 0.80 0.24 0.71 # using sparse GRM
 #' 
 #' @export
 
