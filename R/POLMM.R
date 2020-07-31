@@ -15,6 +15,7 @@
 #'                      "fixed" imputes missing genotypes (NA) by assigning the mean genotype value (i.e. 2p where p is MAF).
 #' @param G.model a character string (default: "Add") to specify additive ("Add"), dominant ("Dom"), or recessive ("Rec") model. 
 #'                If "Dom", GVec = ifelse(GVec >= 1, 1, 0), if "Rec", GVec = ifelse(GVec <= 1, 0, 1). Be very careful if the gneotyp is imputed data.
+#' @param G.missing the code for missing genotype (default=NA). For plink input, G.missing = -9.
 #' @return an R matrix with the following elements
 #' \item{ID}{Marker IDs from colnames(Geno.mtx)}
 #' \item{chr}{Chromosome name from chrVec}
@@ -79,7 +80,8 @@ POLMM = function(objNull,
                  minMAF = 0.0001,
                  maxMissing = 0.15,
                  impute.method = "fixed",
-                 G.model = "Add")
+                 G.model = "Add",
+                 G.missing = NA)
 {
   if(!is.element(impute.method,c("fixed"))) 
     stop("Argument 'impute.method' should be 'fixed'.")
@@ -147,6 +149,7 @@ POLMM = function(objNull,
     RymuVec = objP[["RymuVec"]]
     RPsiR = objP[["RPsiR"]]
     ##
+    cat("Start analyzing chromosome",chr,"\n")
     
     pos = which(chrVec == chr)
     K1roots = c(0,0)
@@ -154,7 +157,12 @@ POLMM = function(objNull,
     for(i in pos){
       GVec = Geno.mtx[,i]
       
-      pos.na = which(is.na(GVec))
+      if(is.na(G.missing)){
+        pos.na = which(is.na(GVec))
+      }else{
+        pos.na = which(GVec == G.missing)
+      }
+      
       missing.rate = length(pos.na)/n
       
       ### genotype imputation
