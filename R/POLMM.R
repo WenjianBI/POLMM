@@ -171,11 +171,11 @@ POLMM = function(objNull,
       
       ### genotype imputation
       if(missing.rate != 0){
-        MAF = AF = mean(GVec, na.rm=T)/2
+        MAF = AF = mean(GVec[-1*pos.na])/2  # this is faster than mean(GVec, na.rm=T)
         if(impute.method=="fixed")
           GVec[pos.na] = 2 * AF
       }else{
-        MAF = AF = mean(GVec)/2   # this is much faster than adding na.rm=T
+        MAF = AF = mean(GVec)/2   # this is faster than mean(GVec, na.rm=T)
       }
       
       ### additive / dominant / recessive
