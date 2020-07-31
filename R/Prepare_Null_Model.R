@@ -115,7 +115,7 @@ getSparseGRM = function(chrVec,
                         relatednessCutoff = 0.05,
                         minMafGRM = 0.01,
                         maxMissingGRM = 0.1,
-                        rm.tempFiles = T)
+                        rm.tempFiles = F)
 {
   PlinkName = basename(PlinkFile)
   chrVec = as.character(chrVec)

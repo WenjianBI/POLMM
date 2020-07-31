@@ -145,6 +145,7 @@ POLMM_Null_Model = function(formula,
   }
   
   control = updateCtrl(control);
+  
   message("The control setting is as belows.")
   print(control)
   
@@ -152,7 +153,8 @@ POLMM_Null_Model = function(formula,
     stop("Cannot specify 'minMafGRM <= 0' or 'minMafVarRatio <= 0'.")
   
   ### Check ?RcppParallel::setThreadOptions for detals about parallel setting
-  RcppParallel:::setThreadOptions(numThreads = control$numThreads, stackSize = control$stackSize)
+  if(!flagSparseGRM)
+    RcppParallel:::setThreadOptions(numThreads = control$numThreads, stackSize = control$stackSize)
   
   if(missing(GMatRatio)){
     flagGMatRatio = F

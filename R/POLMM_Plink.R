@@ -125,7 +125,7 @@ POLMM.plink = function(objNull,
     Geno.mtx = seqminer::readPlinkToMatrixByIndex(plink.file, subjIndex_Null, markerIndex)
     colnames(Geno.mtx) = bim.data$V2[markerIndex]
     
-    if(names(objNull$LOCOList)=="LOCO=F"){
+    if(names(objNull$LOCOList)[1] == "LOCO=F"){
       chrVec = rep("LOCO=F", length(markerIndex))
     }else{
       chrVec = chrVecTot[markerIndex]
@@ -136,9 +136,11 @@ POLMM.plink = function(objNull,
                    G.missing = -9)
     
     if(i == 1){
-      data.table::fwrite(output, output.file, sep = "\t", append = F, row.names = F, col.names = T)
+      data.table::fwrite(output, output.file, sep = "\t", append = F, row.names = F, col.names = T,
+                         na = "NA")
     }else{
-      data.table::fwrite(output, output.file, sep = "\t", append = T, row.names = F, col.names = F)
+      data.table::fwrite(output, output.file, sep = "\t", append = T, row.names = F, col.names = F,
+                         na = "NA")
     }
   }
   
