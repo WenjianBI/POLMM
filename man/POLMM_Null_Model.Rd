@@ -18,13 +18,13 @@ POLMM_Null_Model(
 )
 }
 \arguments{
-\item{formula}{an object of class "formula" to be passed to function ordinal::clm() or glm().}
+\item{formula}{a formula of the form response ~ predictors to be passed to function ordinal::clm(). The response should be an ordered factor and the predictors should not include an intercept term.}
 
-\item{data}{an optional data frame containing the variables in the null model. If not specified, the variables are taken from 'environment(formula)'}
+\item{data}{an optional data frame containing the variables in the null model. If not specified, the variables are taken from 'environment(formula)'.}
 
 \item{subjData}{a character vector to specify subject IDs in 'formula' and 'data'.}
 
-\item{PlinkFile}{a path to Plink files for dense Genetic Relationship Matrix (GRM). Required if argument SparseGRM is not specified.}
+\item{PlinkFile}{a path to Plink files, to construct dense GRM or to extract markers to estimate variant ratio.}
 
 \item{bimFile}{a path to Plink bim file. Default is paste0(PlinkFile,".bim") if not specified.}
 
@@ -32,40 +32,42 @@ POLMM_Null_Model(
 
 \item{famFile}{a path to Plink fam file. Default is paste0(PlinkFile,".fam") if not specified.}
 
-\item{SparseGRM}{an object of class "SparseGRM", check ?getSparseGRM for more details.}
+\item{SparseGRM}{an object of class "SparseGRM", check help(getSparseGRM) for more details.}
 
-\item{GMatRatio}{an object of class "GMatRatio", check ?getGMatRatio for more details. Required if control$LOCO=F.}
+\item{GMatRatio}{an object of class "GMatRatio", usually not used.}
 
 \item{control}{a list of parameters for controlling the fitting process. Check 'Details' Section for more details.}
 }
 \value{
 an R object of 'POLMM_NULL' with the following elements, J is number of categories.
-\item{N}{Number of individuals in analysis.}
-\item{M}{Number of markers in Plink file.}
+\item{N}{Number of subjects in analysis.}
+\item{M}{Number of markers in Plink files.}
 \item{Cova}{A stacked matrix (N(J-1) x p) of covariates; p is number of covariates.}
 \item{beta}{Fixed effect: estimated parameters for covariates.}
 \item{tau}{Variance component. NOTE: usually underestimated due to Penalized Quasi-Likelihood (PQL).}
 \item{bVec}{Random effect: estimated to characterize sample relatedness}
 \item{eps}{Cutpoints for different categories}
-\item{eta}{Linear predicators for all individuals}
+\item{eta}{Linear predicators for all subjects}
 \item{yVec}{A vector of the categorical phenotypes.}
 \item{muMat}{A matrix (N x J), probability in each category.}
 \item{YMat}{A matrix (N x (J-1)), working variable in each category.}
-\item{subjIDs}{A vector of individual IDs in null model}
-\item{LOCOList}{Objects for Step 2 calculation. Might be large if sample size is large and number of chromosomes is large. For example, when analyzing UK Biobank with xx individuals and xx chromosomes, this object is xx Gb.}
+\item{subjIDs}{A vector of subject IDs in null model}
+\item{LOCOList}{Main objects to be passed to step 2. Might be large if the sample size is large and number of chromosomes is large.}
 \item{controlList}{List of control arguments. More details can be seen in 'Details' Section.}
-\item{sessionInfo}{Information of R session when analysis}
-\item{time}{Time when null model fitting is finished}
+\item{sessionInfo}{Information of R session when analyzing.}
+\item{time}{Time when null model fitting is finished.}
 }
 \description{
 Fit a POLMM with a response varaible of ordinal categorical outcome. If the outcome is binary, POLMM degenerates to a logistic mixed model and the package performs similarly as SAIGE. 
-Two options are provided to adjust for sample relatedness. If argument SparseGRM is specified, we use a sparse Genetic Relationship Matrix (GRM, check ?getSparseGRM for more details), otherwise we use a dense GRM.
+Two options are provided to adjust for sample relatedness: 
+If argument SparseGRM is specified, we use a sparse Genetic Relationship Matrix (GRM), check help(getSparseGRM) for more details; 
+otherwise, we use a dense GRM estimated from the markers in plink files.
 }
 \details{
 More information about the list of 'control'
 \itemize{
 \item{memoryChunk: Size (Gb) for each memory chunk when reading in Plink file [default=2].}
-\item{seed: An integer as random seed [default=12345678].}
+\item{seed: An integer as a random seed [default=12345678].}
 \item{tracenrun: Number of runs for trace estimator [default=30].}
 \item{maxiter: Maximum number of iterations used to fit the null POLMM [default=100].}
 \item{tolBeta: Positive tolerance: the iterations converge when |beta - beta_old| / (|beta| + |beta_old| + tolBeta) < tolBeta [default=0.001].}
@@ -79,9 +81,9 @@ More information about the list of 'control'
 \item{maxMissingVarRatio: Maximal value of missing rate cutoff to select markers (from Plink file) to estimate variance ratio [default=0.1].}
 \item{nSNPsVarRatio: Initial number of the selected markers to estimate variance ratio [default=20], the number will be automatically added by 10 until the coefficient of variantion (CV) of the variance ratio estimate is below CVcutoff.}
 \item{CVcutoff: Minimal cutoff of coefficient of variantion (CV) for variance ratio estimation [default=0.0025].}
-\item{LOCO: Whether to apply the leave-one-chromosome-out (LOCO) approach, if FALSE, argument 'GMatRatio' is required [default=TRUE].}
-\item{numThreads: Number of threads (CPUs) to use if dense GRM is used, default is "auto", that is, RcppParallel::defaultNumThreads() [default="auto"].}
-\item{stackSize: Stack size (in bytes) to use for worker threads. For more details, check ?RcppParallel::setThreadOptions [default="auto"].}
+\item{LOCO: Whether to apply the leave-one-chromosome-out (LOCO) approach [default=TRUE].}
+\item{numThreads: Number of threads (CPUs) to use. Only valid if dense GRM is used, default is "auto", that is, RcppParallel::defaultNumThreads() [default="auto"].}
+\item{stackSize: Stack size (in bytes) to use for worker threads. For more details, check help(RcppParallel::setThreadOptions) [default="auto"].}
 \item{grainSize: Grain size of a parallel algorithm sets a minimum chunk size for parallelization. In other words, at what point to stop processing input on separate threads [default=1].}
 \item{minMafGRM: Minimal value of MAF cutoff to select markers (from Plink files) to construct dense GRM [default=0.01].}
 \item{maxMissingGRM: Maximal value of missing rate to select markers (from Plink files) to construct dense GRM [default=0.1].}

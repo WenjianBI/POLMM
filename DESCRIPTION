@@ -2,7 +2,7 @@ Package: POLMM
 Type: Package
 Title: Proportional Odds Logistic Mixed Model (POLMM) for ordinal categorical data analysis
 Version: 0.2.2
-Date: 2020-07-30
+Date: 2020-07-31
 Author: Wenjian Bi, Seunggeun (Shawn) Lee
 Maintainer: Wenjian Bi <wenjianb@umich.edu>
 Description: Proportional Odds Logistic Mixed Model (POLMM) for ordinal categorical data analysis

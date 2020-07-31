@@ -2,69 +2,63 @@
 % Please edit documentation in R/Prepare_Null_Model.R
 \name{getSparseGRM}
 \alias{getSparseGRM}
-\title{Get an object of 'SparseGRM' for POLMM_Null_Model()}
+\title{Get an object of 'SparseGRM' for POLMM_Null_Model(). Only valid in Linux since GCTA software can only be used in Linux.}
 \usage{
 getSparseGRM(
-  outPrefix,
   chrVec,
   PlinkFile,
+  nPartsGRM = 250,
+  tempDir = NULL,
   relatednessCutoff = 0.05,
   minMafGRM = 0.01,
-  maxMissingGRM = 0.1,
-  nPartsGRM = 250
+  maxMissingGRM = 0.1
 )
 }
 \arguments{
-\item{outPrefix}{a path to specify the prefix of output files}
-
-\item{chrVec}{a character vector to specify all chromosomes (e.g. 1:22), better autosomes.}
+\item{chrVec}{a character vector to specify all chromosomes (e.g. 1:22), better autosomes. This should be consistent to the input of getSparseGRMParallel().}
 
 \item{PlinkFile}{a path to Plink files. The current version (gcta_1.93.1beta) of gcta software does not support difference prefix names for bim, bed and fam files.}
 
-\item{relatednessCutoff}{a cutoff for sparse GRM, if the kinship coefficient is greater than this cutoff, it will be in sparse GRM.}
+\item{nPartsGRM}{GCTA software can split subjects to multiple parts. For UK-Biobank analysis, it is recommanded to use 250 parts. This should be consistent to the input of getSparseGRMParallel().}
+
+\item{tempDir}{a path to store temp files from getSparseGRMParallel(). This should be consistent to the input of getSparseGRMParallel(). Default is system.file("SparseGRM", "temp", package = "POLMM").}
+
+\item{relatednessCutoff}{a cutoff for sparse GRM, only kinship coefficient greater than this cutoff will be retained in sparse GRM.}
 
 \item{minMafGRM}{Minimal value of MAF cutoff to select markers (from Plink files) to construct GRM.}
 
 \item{maxMissingGRM}{Maximal value of missing rate to select markers (from Plink files) to construct GRM.}
 
-\item{nPartsGRM}{GCTA software can split subjects to multiple parts. For UK-Biobank analysis, it is recommanded to use 250 parts.}
-
 \item{threadNum}{Number of threads (CPUs) to use.}
 }
 \description{
-If you prefer using a sparse GRM to adjust for sample relatedness, you need this function to get an object of 'SparseGRM'. 
-Our simulations show that using sparse GRM is almost the same reliable as using dense GRM, with a huge improvement of computational efficiency. 
+If the sample size is greater than 100,000, we recommend using sparse GRM to adjust for sample relatedness. 
+This function is to use GCTA software (gcta_1.93.1beta, https://cnsgenomics.com/software/gcta/#Overview) to get an object of 'SparseGRM' to be passed to function POLMM_Null_Model(). 
 \cr\cr
-Step 1: Download GCTA software from https://cnsgenomics.com/software/gcta/#Overview; 
+Step 1: Run getSparseGRMParallel(); please check help(getSparseGRMParallel) for more details. 
 \cr
-Step 2: Run getSparseGRMParallel(); 
-\cr
-Step 3: Run getSparseGRM().
+Step 2: Run getSparseGRM().
 }
 \examples{
-## First download GCTA software, then you can use the following commands
+## Input data:
 famFile = system.file("extdata", "nSNPs-10000-nsubj-1000-ext.fam", package = "POLMM")
 PlinkFile = gsub(".fam", "", famFile)   # fam/bim/bed files should have the same prefix
-gcta64File = "/net/snowwhite/home/wenjianb/gcta64"  # should download gcta first (https://cnsgenomics.com/software/gcta/#Download, author version is gcta_1.93.1beta)
-outPrefix = gsub("nSNPs-10000-nsubj-1000-ext.fam","SparseGRM/sp", famFile) # Dir/prefix of the output files (in step 2)
-SparseGRMFile = gsub("nSNPs-10000-nsubj-1000-ext.fam","SparseGRM.RData", famFile) # output file (in step 3)
 nPartsGRM = 2;   # nPartsGRM = 250 for UK Biobank data analysis
-chrVec = 1:4    # maybe paste0("chr",1:22), depending on the plink bim file
+chrVec = 1:22    # maybe paste0("chr",1:22), depending on the plink bim file
 
-## Step 2:
-## We strongly suggest parallel computing for different pairs of (chrParallel, partParallel). 
+## Step 1:
+## We strongly suggest parallel computing in high performance clusters (HPC) for different pairs of (chrParallel, partParallel). 
 for(chrParallel in chrVec){
   for(partParallel in 1:nPartsGRM){
-    getSparseGRMParallel(outPrefix, chrParallel, partParallel, gcta64File, PlinkFile, nPartsGRM = nPartsGRM)
+    getSparseGRMParallel(chrParallel, partParallel, nPartsGRM, PlinkFile)
   }
 }
 
-## After that, in "outPrefix", there will be results (needs large amount of storage) corresponding to different pairs of (chrParallel, partParallel).
+## After step 1, in "tempDir (default: system.file("SparseGRM", "temp", package = "POLMM"))", there will be results (might needs large amount of space) corresponding to different pairs of (chrParallel, partParallel).
 
-## Step 3:
-## Combine results in step 2 to calculate an object with class of SparseGRM for POLMM_Null_Model(),
-SparseGRM = getSparseGRM(outPrefix, chrVec, PlinkFile, nPartsGRM = nPartsGRM)
-save(SparseGRM, file=SparseGRMFile)
+## Step 2:
+## Combine results in step 1 to calculate an object with class of SparseGRM for POLMM_Null_Model(),
+SparseGRM = getSparseGRM(chrVec, PlinkFile, nPartsGRM)
 
-## NOTE: You can change some options such as (minMafGRM, maxMissingGRM, nPartsGRM), but keep in mind that functions getSparseGRMParallel() and getSparseGRM() should use the same change of these options.
+## NOTE: You can change some options such as (minMafGRM, maxMissingGRM, nPartsGRM), but keep in mind that functions getSparseGRMParallel() and getSparseGRM() should use the same options.
 }

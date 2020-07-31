@@ -12,7 +12,8 @@ POLMM(
   minMAF = 1e-04,
   maxMissing = 0.15,
   impute.method = "fixed",
-  G.model = "Add"
+  G.model = "Add",
+  G.missing = NA
 )
 }
 \arguments{
@@ -35,6 +36,8 @@ Missng genotype should be coded as NA. Both hard-called and imputed genotype dat
 
 \item{G.model}{a character string (default: "Add") to specify additive ("Add"), dominant ("Dom"), or recessive ("Rec") model. 
 If "Dom", GVec = ifelse(GVec >= 1, 1, 0), if "Rec", GVec = ifelse(GVec <= 1, 0, 1). Be very careful if the gneotyp is imputed data.}
+
+\item{G.missing}{the code for missing genotype (default=NA). For plink input, G.missing = -9.}
 }
 \value{
 an R matrix with the following elements
