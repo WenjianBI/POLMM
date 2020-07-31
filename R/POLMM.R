@@ -107,10 +107,12 @@ POLMM = function(objNull,
   n = nrow(Geno.mtx);    # number of individuals
   m = ncol(Geno.mtx);    # number of markers to test
   
-  if(missing(chrVec)){
-   if(names(objNull$LOCOList)!="LOCO=F")
-     stop("chrVec is required unless LOCO = F.")
+  if(names(objNull$LOCOList)[1]=="LOCO=F"){
     chrVec = rep("LOCO=F",m)
+  }else{
+    if(missing(chrVec)){
+      stop("chrVec is required unless LOCO = F.") 
+    }
   }
   
   if(length(chrVec)==1){
