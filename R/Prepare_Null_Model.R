@@ -5,9 +5,9 @@
 #' @param chrParallel a character of chromosome number (e.g. 1, 2, ..., 22), better autosomes.  
 #' @param partParallel a numeric value (from 1 to nPartsGRM)
 #' @param nPartsGRM a numeric value (e.g. 250): GCTA software can split subjects to multiple parts. For UK-Biobank analysis, it is recommanded to use 250 parts. 
-#' @param PlinkFile a path to Plink files. The current version (gcta_1.93.1beta) of gcta software does not support difference prefix names for bim, bed and fam files. 
+#' @param PlinkFile a path to Plink files. The current version (gcta_1.93.1beta) of gcta software does not support different prefix names for bim, bed and fam files. 
 #' @param tempDir a path to store temp files from getSparseGRMParallel(). This should be consistent to the input of getSparseGRM(). Default is system.file("SparseGRM", "temp", package = "POLMM").
-#' @param subjData a character vector to specify subject IDs to select (i.e. IID). Default is NULL, i.e. all subjects are selected in sparse GRM. If the number of subjects is less than 1,000, the GRM estimation might not be accurate.
+#' @param subjData a character vector to specify subject IDs to retain (i.e. IID). Default is NULL, i.e. all subjects are retained in sparse GRM. If the number of subjects is less than 1,000, the GRM estimation might not be accurate.
 #' @param minMafGRM Minimal value of MAF cutoff to select markers (from Plink files) to construct GRM.
 #' @param maxMissingGRM Maximal value of missing rate to select markers (from Plink files) to construct GRM.
 #' @param threadNum Number of threads (CPUs) to use.
@@ -77,13 +77,13 @@ getSparseGRMParallel = function(chrParallel,
 #' \cr
 #' Step 2: Run getSparseGRM().
 #' @param chrVec a character vector to specify all chromosomes (e.g. 1:22), better autosomes. This should be consistent to the input of getSparseGRMParallel(). 
-#' @param PlinkFile a path to Plink files. The current version (gcta_1.93.1beta) of gcta software does not support difference prefix names for bim, bed and fam files. 
+#' @param PlinkFile a path to Plink files. The current version (gcta_1.93.1beta) of gcta software does not support different prefix names for bim, bed and fam files. 
 #' @param nPartsGRM a numeric value (e.g. 250): GCTA software can split subjects to multiple parts. For UK-Biobank analysis, it is recommanded to use 250 parts. 
 #' @param tempDir a path to store temp files from getSparseGRMParallel(). This should be consistent to the input of getSparseGRMParallel(). Default is system.file("SparseGRM", "temp", package = "POLMM").
 #' @param relatednessCutoff a cutoff for sparse GRM, only kinship coefficient greater than this cutoff will be retained in sparse GRM.
 #' @param minMafGRM Minimal value of MAF cutoff to select markers (from Plink files) to construct GRM.
 #' @param maxMissingGRM Maximal value of missing rate to select markers (from Plink files) to construct GRM.
-#' @param threadNum Number of threads (CPUs) to use.
+#' @param rm.tempFiles a logical value indicating if the temp files generated in getSparseGRMParallel will be deleted
 #' @examples 
 #' ## Input data:
 #' famFile = system.file("extdata", "nSNPs-10000-nsubj-1000-ext.fam", package = "POLMM")
@@ -114,7 +114,8 @@ getSparseGRM = function(chrVec,
                         tempDir = NULL,
                         relatednessCutoff = 0.05,
                         minMafGRM = 0.01,
-                        maxMissingGRM = 0.1)
+                        maxMissingGRM = 0.1,
+                        rm.tempFiles = T)
 {
   PlinkName = basename(PlinkFile)
   chrVec = as.character(chrVec)
@@ -146,6 +147,10 @@ getSparseGRM = function(chrVec,
       grm = readBin(BinFile, n = nData, what = numeric(0), size = 4)
       nMarkers = readBin(NFile, n = nData, what = numeric(0), size = 4)
       tempList[[chr]] = list(ID = ID, grm = grm, nMarkers = nMarkers)
+      
+      if(rm.tempFiles){
+        file.remove(IDFile, BinFile, NFile)
+      }
     }
     
     ## calculate GRM based on all chromosomes
