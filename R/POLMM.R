@@ -27,6 +27,7 @@
 #' \item{beta}{Estimated effect size: Stat / VarP}
 #' \item{pval.norm}{p values calculated from normal approximation}
 #' \item{pval.spa}{p values calculated from saddlepoint approximation}
+#' \item{switch.allele}{a logical value indicating if the REF/ALT alleles were switched, if AF > 0.5, we use GVec = 2-GVec, and then give switch.allele=T. This is useful to estimate the effect direction.}
 #' @examples 
 #' ## We use a Plink file with 10,000 markers and 1,000 subjects to constract GRM for demonstration. 
 #' ## For real data analysis, we recommend >= 100,000 common markers (MAF > 0.05 or 0.01).
@@ -133,8 +134,8 @@ POLMM = function(objNull,
   J = ncol(objNull$muMat)
   yMat = getyMatR(objNull$yVec, n, J)
   
-  OutMat = matrix(nrow = m, ncol = 10)
-  colnames(OutMat) = c("SNPID", "chr", "MAF", "missing.rate", "Stat", "VarW", "VarP", "beta", "pval.norm", "pval.spa")
+  OutMat = matrix(nrow = m, ncol = 11)
+  colnames(OutMat) = c("SNPID", "chr", "MAF", "missing.rate", "Stat", "VarW", "VarP", "beta", "pval.norm", "pval.spa", "switch.allele")
   index = 0;
   
   for(chr in uniq_chr){
@@ -183,13 +184,15 @@ POLMM = function(objNull,
       
       SNPID = colnames(Geno.mtx)[i]
       
+      switch.allele = F
       if(AF > 0.5){
         MAF = 1 - AF;
         GVec = 2 - GVec
+        switch.allele = T
       }
       
       if(MAF < minMAF || missing.rate > maxMissing){
-        OutMat[index,] = c(SNPID, chr, MAF, missing.rate, rep(NA,6))
+        OutMat[index,] = c(SNPID, chr, MAF, missing.rate, rep(NA,7))
         next
       }
 
@@ -220,7 +223,7 @@ POLMM = function(objNull,
       }
       
       OutMat[index,] = c(SNPID, chr, MAF, missing.rate, 
-                         Stat, VarW, VarP, beta, pval.norm, pval.spa)
+                         Stat, VarW, VarP, beta, pval.norm, pval.spa, switch.allele)
     }
   }
   

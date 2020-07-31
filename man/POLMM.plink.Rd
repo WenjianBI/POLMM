@@ -41,8 +41,8 @@ If "Dom", GVec = ifelse(GVec >= 1, 1, 0), if "Rec", GVec = ifelse(GVec <= 1, 0, 
 \item{chrVec}{a character or a character vector to specify chromosome(s) of the markers in Geno.mtx. Must be specified unless LOCO = F.}
 }
 \value{
-an R matrix with the following elements
-\item{ID}{Marker IDs from colnames(Geno.mtx)}
+results can be found in 'output.file': a matrix with the following elements
+\item{ID}{Marker IDs from bim file}
 \item{chr}{Chromosome name from chrVec}
 \item{MAF}{MAFs of the markers}
 \item{missing.rate}{Missing rates of the markers}
@@ -52,6 +52,7 @@ an R matrix with the following elements
 \item{beta}{Estimated effect size: Stat / VarP}
 \item{pval.norm}{p values calculated from normal approximation}
 \item{pval.spa}{p values calculated from saddlepoint approximation}
+\item{switch.allele}{a logical value indicating if the REF/ALT alleles were switched, if AF > 0.5, we use GVec = 2-GVec, and then give switch.allele=T. This is useful to estimate the effect direction.}
 }
 \description{
 Test for association between genotype and an ordinal categorical variable via Proportional Odds Logistic Mixed Model (POLMM)

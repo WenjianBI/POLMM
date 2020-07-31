@@ -14,8 +14,8 @@
 #'                      "fixed" imputes missing genotypes (NA) by assigning the mean genotype value (i.e. 2p where p is MAF).
 #' @param G.model a character string (default: "Add") to specify additive ("Add"), dominant ("Dom"), or recessive ("Rec") model. 
 #'                If "Dom", GVec = ifelse(GVec >= 1, 1, 0), if "Rec", GVec = ifelse(GVec <= 1, 0, 1). Be very careful if the gneotyp is imputed data.
-#' @return an R matrix with the following elements
-#' \item{ID}{Marker IDs from colnames(Geno.mtx)}
+#' @return results can be found in 'output.file': a matrix with the following elements
+#' \item{ID}{Marker IDs from bim file}
 #' \item{chr}{Chromosome name from chrVec}
 #' \item{MAF}{MAFs of the markers}
 #' \item{missing.rate}{Missing rates of the markers}
@@ -25,6 +25,7 @@
 #' \item{beta}{Estimated effect size: Stat / VarP}
 #' \item{pval.norm}{p values calculated from normal approximation}
 #' \item{pval.spa}{p values calculated from saddlepoint approximation}
+#' \item{switch.allele}{a logical value indicating if the REF/ALT alleles were switched, if AF > 0.5, we use GVec = 2-GVec, and then give switch.allele=T. This is useful to estimate the effect direction.}
 #' @examples 
 #' ## We use a Plink file with 10,000 markers and 1,000 subjects to constract GRM for demonstration. 
 #' ## For real data analysis, we recommend >= 100,000 common markers (MAF > 0.05 or 0.01).

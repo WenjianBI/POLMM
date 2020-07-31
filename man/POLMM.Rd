@@ -51,6 +51,7 @@ an R matrix with the following elements
 \item{beta}{Estimated effect size: Stat / VarP}
 \item{pval.norm}{p values calculated from normal approximation}
 \item{pval.spa}{p values calculated from saddlepoint approximation}
+\item{switch.allele}{a logical value indicating if the REF/ALT alleles were switched, if AF > 0.5, we use GVec = 2-GVec, and then give switch.allele=T. This is useful to estimate the effect direction.}
 }
 \description{
 Test for association between genetic variants and an ordinal categorical variable via Proportional Odds Logistic Mixed Model (POLMM)
