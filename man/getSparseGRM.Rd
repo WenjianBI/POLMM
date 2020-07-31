@@ -7,19 +7,20 @@
 getSparseGRM(
   chrVec,
   PlinkFile,
-  nPartsGRM = 250,
+  nPartsGRM,
   tempDir = NULL,
   relatednessCutoff = 0.05,
   minMafGRM = 0.01,
-  maxMissingGRM = 0.1
+  maxMissingGRM = 0.1,
+  rm.tempFiles = T
 )
 }
 \arguments{
 \item{chrVec}{a character vector to specify all chromosomes (e.g. 1:22), better autosomes. This should be consistent to the input of getSparseGRMParallel().}
 
-\item{PlinkFile}{a path to Plink files. The current version (gcta_1.93.1beta) of gcta software does not support difference prefix names for bim, bed and fam files.}
+\item{PlinkFile}{a path to Plink files. The current version (gcta_1.93.1beta) of gcta software does not support different prefix names for bim, bed and fam files.}
 
-\item{nPartsGRM}{GCTA software can split subjects to multiple parts. For UK-Biobank analysis, it is recommanded to use 250 parts. This should be consistent to the input of getSparseGRMParallel().}
+\item{nPartsGRM}{a numeric value (e.g. 250): GCTA software can split subjects to multiple parts. For UK-Biobank analysis, it is recommanded to use 250 parts.}
 
 \item{tempDir}{a path to store temp files from getSparseGRMParallel(). This should be consistent to the input of getSparseGRMParallel(). Default is system.file("SparseGRM", "temp", package = "POLMM").}
 
@@ -29,7 +30,7 @@ getSparseGRM(
 
 \item{maxMissingGRM}{Maximal value of missing rate to select markers (from Plink files) to construct GRM.}
 
-\item{threadNum}{Number of threads (CPUs) to use.}
+\item{rm.tempFiles}{a logical value indicating if the temp files generated in getSparseGRMParallel will be deleted}
 }
 \description{
 If the sample size is greater than 100,000, we recommend using sparse GRM to adjust for sample relatedness. 

@@ -75,20 +75,20 @@ objNull = POLMM_Null_Model(as.factor(outcome)~Cova1+Cova2,
 objNull$tau
 
 ## Fit the null POLMM using the Sparse GRM
-SparseGRMFile = system.file("extdata", "SparseGRM.RData", package = "POLMM")
+SparseGRMFile = system.file("SparseGRM", "SparseGRM.RData", package = "POLMM")
 load(SparseGRMFile)   ## check getSparseGRM() for more details about how to make an R object of "SparseGRM" using Plink files. 
 objNull = POLMM_Null_Model(as.factor(outcome)~Cova1+Cova2, 
                            SparseGRM = SparseGRM,
                            data=egData, PlinkFile = PlinkFile, subjData = egData$IID)
                            
-## If control$seed is not changed, objNull$tau should be 0.8506
+## If control$seed is not changed, objNull$tau should be 0.8285
 objNull$tau
 
-## when using function POLMM(), argument chrVec should be from
+## when using function POLMM()/POLMM.plink, argument chrVec/chrVec.plink should be from
 names(objNull$LOCOList)
 
 POLMM.plink(objNull, PlinkFile, outFile, 
-            chrVec.plink = c(1,2,3,4));  # since sparseGRM only includes these 4 chromosomes
+            chrVec.plink = c(1,2,3,4));  # if you only want to analyze variants in chromosomes 1-4 
 outPOLMM = read.table(outFile, header = T)
 head(outPOLMM)
 }

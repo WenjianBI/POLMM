@@ -92,42 +92,6 @@ More information about the list of 'control'
 }
 }
 \examples{
-## We use a Plink file with 10,000 markers and 1,000 subjects to constract GRM for demonstration. 
-## For real data analysis, we recommend >= 100,000 common markers (MAF > 0.05 or 0.01).
-## Selection of the common markers is similar as in Principle Components Analysis (PCA).
-famFile = system.file("extdata", "nSNPs-10000-nsubj-1000-ext.fam", package = "POLMM")
-PlinkFile = gsub("-ext.fam","-ext",famFile)
-dataFile = system.file("extdata", "POLMM_data.csv", package = "POLMM")
-
-egData = data.table::fread(dataFile)
-
-## Fit the null POLMM using the Dense GRM
-objNull = POLMM_Null_Model(as.factor(outcome)~Cova1+Cova2, 
-                           data=egData, PlinkFile = PlinkFile, subjData = egData$IID)
-
-## If control$seed is not changed, objNull$tau should be 0.7353
-objNull$tau
-
-## Fit the null POLMM using the Sparse GRM
-SparseGRMFile = system.file("extdata", "SparseGRM.RData", package = "POLMM")
-load(SparseGRMFile)   ## check getSparseGRM() for more details about how to make an R object of "SparseGRM" using Plink files. 
-objNull = POLMM_Null_Model(as.factor(outcome)~Cova1+Cova2, 
-                           SparseGRM = SparseGRM,
-                           data=egData, PlinkFile = PlinkFile, subjData = egData$IID)
-                           
-## If control$seed is not changed, objNull$tau should be 0.8506
-objNull$tau
-
-
-## If you want more accurate parameter estimation, smaller tolBeta/tolTau can be used. 
-objNull = POLMM_Null_Model(as.factor(outcome)~Cova1+Cova2, 
-                           data=egData, PlinkFile = PlinkFile, subjData = egData$IID,
-                           control=list(tolTau=0.001))  # Default toTau = 0.002
-objNull$tau  # 0.7368
-
-## This is for me to check the computational efficiency
-objNull = POLMM_Null_Model(as.factor(outcome)~Cova1+Cova2, 
-                           data=egData, PlinkFile = PlinkFile, subjData = egData$IID,
-                           control=list(onlyCheckTime = T, numThreads = 4))  # Default nThreads = 0, that is, RcppParallel::defaultNumThreads()
+## please check help(POLMM) for example codes
   
 }

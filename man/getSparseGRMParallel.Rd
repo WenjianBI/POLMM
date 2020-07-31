@@ -23,11 +23,11 @@ getSparseGRMParallel(
 
 \item{nPartsGRM}{a numeric value (e.g. 250): GCTA software can split subjects to multiple parts. For UK-Biobank analysis, it is recommanded to use 250 parts.}
 
-\item{PlinkFile}{a path to Plink files. The current version (gcta_1.93.1beta) of gcta software does not support difference prefix names for bim, bed and fam files.}
+\item{PlinkFile}{a path to Plink files. The current version (gcta_1.93.1beta) of gcta software does not support different prefix names for bim, bed and fam files.}
 
 \item{tempDir}{a path to store temp files from getSparseGRMParallel(). This should be consistent to the input of getSparseGRM(). Default is system.file("SparseGRM", "temp", package = "POLMM").}
 
-\item{subjData}{a character vector to specify subject IDs to select (i.e. IID). Default is NULL, i.e. all subjects are selected in sparse GRM. If the number of subjects is less than 1,000, the GRM estimation might not be accurate.}
+\item{subjData}{a character vector to specify subject IDs to retain (i.e. IID). Default is NULL, i.e. all subjects are retained in sparse GRM. If the number of subjects is less than 1,000, the GRM estimation might not be accurate.}
 
 \item{minMafGRM}{Minimal value of MAF cutoff to select markers (from Plink files) to construct GRM.}
 

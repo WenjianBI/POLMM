@@ -2,7 +2,7 @@
 % Please edit documentation in R/POLMM.R
 \name{POLMM}
 \alias{POLMM}
-\title{Test for association between genotype and an ordinal categorical variable via Proportional Odds Logistic Mixed Model (POLMM)}
+\title{Test for association between genetic variants and an ordinal categorical variable via Proportional Odds Logistic Mixed Model (POLMM)}
 \usage{
 POLMM(
   objNull,
@@ -17,11 +17,11 @@ POLMM(
 )
 }
 \arguments{
-\item{objNull}{output object of the POLMM_Null_Model() function}
+\item{objNull}{the output of the POLMM_Null_Model() function}
 
-\item{Geno.mtx}{a numeric genotype matrix with each row as an individual and each column as a marker. 
+\item{Geno.mtx}{a numeric genotype matrix with each row as a subject and each column as a marker. 
 Column names of marker IDs and row names of individual IDs are required.
-Missng genotype should be coded as NA. Both hard-called and imputed genotype data are supported.}
+Missng genotype should be coded as in argument 'G.missing'. Both hard-called and imputed genotype are supported.}
 
 \item{chrVec}{a character or a character vector to specify chromosome(s) of the markers in Geno.mtx. Must be specified unless LOCO = F.}
 
@@ -53,7 +53,7 @@ an R matrix with the following elements
 \item{pval.spa}{p values calculated from saddlepoint approximation}
 }
 \description{
-Test for association between genotype and an ordinal categorical variable via Proportional Odds Logistic Mixed Model (POLMM)
+Test for association between genetic variants and an ordinal categorical variable via Proportional Odds Logistic Mixed Model (POLMM)
 }
 \examples{
 ## We use a Plink file with 10,000 markers and 1,000 subjects to constract GRM for demonstration. 
@@ -73,13 +73,13 @@ objNull = POLMM_Null_Model(as.factor(outcome)~Cova1+Cova2,
 objNull$tau
 
 ## Fit the null POLMM using the Sparse GRM
-SparseGRMFile = system.file("extdata", "SparseGRM.RData", package = "POLMM")
+SparseGRMFile = system.file("SparseGRM", "SparseGRM.RData", package = "POLMM")
 load(SparseGRMFile)   ## check getSparseGRM() for more details about how to make an R object of "SparseGRM" using Plink files. 
 objNull = POLMM_Null_Model(as.factor(outcome)~Cova1+Cova2, 
                            SparseGRM = SparseGRM,
                            data=egData, PlinkFile = PlinkFile, subjData = egData$IID)
                            
-## If control$seed is not changed, objNull$tau should be 0.8506
+## If control$seed is not changed, objNull$tau should be 0.8285
 objNull$tau
 
 ## when using function POLMM(), argument chrVec should be from
@@ -95,8 +95,6 @@ outPOLMM = POLMM(objNull, Geno.mtx, chrVec)
 outPOLMM
 round(as.numeric(outPOLMM$pval.spa),2)
 ## [1] 0.89 0.46 0.82 0.71 0.34 0.30 0.20 0.82 0.25 0.71 # using dense GRM
-## [1] 0.82 0.46 0.76 0.68 0.36 0.23 0.21 0.80 0.24 0.71 # using sparse GRM
+## [1] 0.91 0.43 0.77 0.67 0.33 0.23 0.24 0.82 0.26 0.73 # using sparse GRM
 
-outPOLMM = POLMM(objNull, Geno.mtx, chrVec, SPAcutoff = 0) # smaller SPAcutoff: more SNPs use saddlepoint approximation
-round(as.numeric(outPOLMM$pval.spa),2)
 }
