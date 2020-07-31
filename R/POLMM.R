@@ -154,14 +154,16 @@ POLMM = function(objNull,
     for(i in pos){
       GVec = Geno.mtx[,i]
       
-      MAF = AF = mean(GVec, na.rm=T)/2
-      
-      ### genotype imputation
       pos.na = which(is.na(GVec))
       missing.rate = length(pos.na)/n
+      
+      ### genotype imputation
       if(missing.rate != 0){
+        MAF = AF = mean(GVec, na.rm=T)/2
         if(impute.method=="fixed")
           GVec[pos.na] = 2 * AF
+      }else{
+        MAF = AF = mean(GVec)/2   # this is much faster than adding na.rm=T
       }
       
       ### additive / dominant / recessive
@@ -185,7 +187,7 @@ POLMM = function(objNull,
       #############
       
       posG1 = which(GVec != 0)
-      posG0 = setdiff(1:n, posG1)
+      posG0 = which(GVec == 0)
       
       XR_Psi_RG1 = XR_Psi_R_new[,posG1,drop=F] %*% GVec[posG1]
       adjGVec = GVec - XXR_Psi_RX_new %*% XR_Psi_RG1
