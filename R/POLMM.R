@@ -135,7 +135,10 @@ POLMM = function(objNull,
   J = ncol(objNull$muMat)
   yMat = getyMatR(objNull$yVec, n, J)
   
-  OutMat = c()
+  OutMat = matrix(nrow = m, ncol = 10)
+  colnames(OutMat) = c("SNPID", "chr", "MAF", "missing.rate", "Stat", "VarW", "VarP", "beta", "pval.norm", "pval.spa")
+  index = 0;
+  
   for(chr in uniq_chr){
     r = objNull$LOCOList[[chr]]$VarRatio
     muMat = objNull$LOCOList[[chr]]$muMat
@@ -155,6 +158,7 @@ POLMM = function(objNull,
     K1roots = c(0,0)
     
     for(i in pos){
+      index = index + 1;
       GVec = Geno.mtx[,i]
       
       if(is.na(G.missing)){
@@ -187,22 +191,23 @@ POLMM = function(objNull,
       }
       
       if(MAF < minMAF || missing.rate > maxMissing){
-        OutMat = rbind(OutMat, 
-                       c(SNPID, chr, MAF, missing.rate, rep(NA,6)))
+        OutMat[index,] = c(SNPID, chr, MAF, missing.rate, rep(NA,6))
         next
       }
 
       #############
       
       posG1 = which(GVec != 0)
-      posG0 = which(GVec == 0)
+      # posG0 = which(GVec == 0)
       
       XR_Psi_RG1 = XR_Psi_R_new[,posG1,drop=F] %*% GVec[posG1]
       adjGVec = GVec - XXR_Psi_RX_new %*% XR_Psi_RG1
       Stat = sum(adjGVec * RymuVec)
       VarWVec = RPsiR * adjGVec^2
       VarW = sum(VarWVec)
-      VarW0 = sum(VarWVec[posG0])
+      # VarW0 = sum(VarWVec[posG0])
+      VarW1 = sum(VarWVec[posG1])
+      VarW0 = VarW - VarW1
       Ratio0 = VarW0/VarW
       VarP = VarW * r
       z = abs(Stat)/sqrt(VarP)
@@ -216,12 +221,11 @@ POLMM = function(objNull,
         K1roots = res.spa$K1roots;
       }
       
-      OutMat = rbind(OutMat, 
-                     c(SNPID, chr, MAF, missing.rate, Stat, VarW, VarP, beta, pval.norm, pval.spa))
+      OutMat[index,] = c(SNPID, chr, MAF, missing.rate, 
+                         Stat, VarW, VarP, beta, pval.norm, pval.spa)
     }
   }
   
-  colnames(OutMat) = c("SNPID", "chr", "MAF", "missing.rate", "Stat", "VarW", "VarP", "beta", "pval.norm", "pval.spa")
   OutMat = as.data.frame(OutMat, stringsAsFactors=F)
   return(OutMat)
 }
