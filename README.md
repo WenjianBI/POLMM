@@ -23,3 +23,6 @@ Please do not hesitate to contact me (wenjianb@umich.edu) if you meet any proble
 1. Use function getSparseGRMParallel() to generate GRM files for each chromosome (can split all subjects into multiple parts: we use 250 parts for UK Biobank analysis)
 1. Use function getSparseGRM() to combine all GRM files to generate an R object of "SparseGRM" to be passed to main function POLMM_Null_Model() 
 
+### PheWeb for UK Biobank data analysis results
+
+We have applied this method to analyze 108 categorical phenotypes in UK Biobank data of 408,961 samples from white British participants with European ancestry. The results can be found in http://polmm.leelabsg.org/.
