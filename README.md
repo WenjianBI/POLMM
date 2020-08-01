@@ -20,7 +20,6 @@ Please do not hesitate to contact me (wenjianb@umich.edu) if you meet any proble
 **Using sparse GRM (Our recommendation):** Much faster than using dense GRM and also supports LOCO option. Users should pass an R object of 'SparseGRM' to the main function POLMM_Null_Model(). The below is the manual to make an R object of 'SparseGRM' which can include multiple GRMs for different chromosomes.  
 
 **How to make an R object of SparseGRM:**  
-1. Download gcta software from https://cnsgenomics.com/software/gcta/#Overview
 1. Use function getSparseGRMParallel() to generate GRM files for each chromosome (can split all subjects into multiple parts: we use 250 parts for UK Biobank analysis)
 1. Use function getSparseGRM() to combine all GRM files to generate an R object of "SparseGRM" to be passed to main function POLMM_Null_Model() 
 
