@@ -66,7 +66,7 @@ void POLMMClass::fitPOLMM()
   // start iteration
   cout << "Start iteration ....." << endl;
   
-  for(int iter = 0; iter < m_maxiter; iter ++){
+  for(m_iter = 0; m_iter < m_maxiter; m_iter ++){
     
     // update fixed effect coefficients
     updateParaConv("none");
@@ -78,10 +78,9 @@ void POLMMClass::fitPOLMM()
     if(std::isnan(m_tau))
       stop("Parameter tau is NA.");
     
-    cout << "iter: " << iter << endl;
+    cout << "iter: " << m_iter << endl;
     cout << "beta: " << endl << m_beta << endl;
     cout << "tau: " << m_tau << endl << endl;
-    iter++;
     
     double diffTau = abs(m_tau - tau0) / (abs(m_tau) + abs(tau0) + m_tolTau);
     if(diffTau < m_tolTau)
@@ -144,6 +143,7 @@ void POLMMClass::fitPOLMM()
 
 arma::mat POLMMClass::getVarRatio(arma::mat t_GMatRatio, string t_excludechr)
 {
+  cout << "Start estimating variance ratio...." << endl;
   Rcpp::List objP = getobjP(m_Cova, m_yMat, m_muMat, m_iRMat);
   
   arma::vec GVec(m_n);
@@ -520,6 +520,7 @@ arma::vec POLMMClass::getKinbVecPOLMM(arma::vec t_bVec, string t_excludeChr)
   }else{
     KinbVec = getKinbVec(t_bVec, m_ptrDenseGRMObj, t_excludeChr, m_grainSize);
   }
+  Rcpp::checkUserInterrupt();
   return KinbVec;
 }
 
@@ -699,6 +700,7 @@ Rcpp::List POLMMClass::getPOLMM()
   Rcpp::List outList = List::create(Named("N") = m_n,              // number of samples
                                     Named("M") = m_M,              // number of SNPs in Plink file
                                     Named("controlList") = m_controlList,
+                                    Named("iter") = m_iter,
                                     Named("eta") = m_eta,          // X %*% beta + bVec
                                     Named("yVec") = m_yVec,        // matrix with dim of n x 1: observation
                                     Named("Cova") = m_Cova,        // matrix with dim of n(J-1) x p: covariates

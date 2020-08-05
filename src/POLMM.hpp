@@ -38,6 +38,7 @@ private:
   // parameters
   arma::vec m_beta, m_bVec, m_eps;
   double m_tau;
+  int m_iter;
   
   // control paramters
   int m_maxiter, m_maxiterPCG, m_maxiterEps; 
