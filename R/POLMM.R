@@ -98,7 +98,14 @@ POLMM = function(objNull,
   
   subjIDs_Null = objNull$subjIDs
   
-  if(any(subjIDs_Null != subjIDs)){
+  check.subjIDs = T
+  if(length(subjIDs_Null)==length(subjIDs)){
+    if(all(subjIDs_Null == subjIDs)){
+      check.subjIDs = F
+    }
+  }
+  
+  if(check.subjIDs){
     subjPos = match(subjIDs_Null, subjIDs, 0)
     if(any(subjPos==0))
       stop("all subjucts in null model should be also in 'Geno.mtx'.")
