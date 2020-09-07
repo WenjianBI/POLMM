@@ -5,6 +5,18 @@ fitPOLMMcpp <- function(t_flagSparseGRM, t_flagGMatRatio, t_bimfile, t_famfile, 
     .Call(`_POLMM_fitPOLMMcpp`, t_flagSparseGRM, t_flagGMatRatio, t_bimfile, t_famfile, t_bedfile, t_posSampleInPlink, t_Cova, t_yVec, t_beta, t_bVec, t_eps, t_tau, t_GMatRatio, t_SparseGRM, t_controlList)
 }
 
+setPOLMMGENEobj <- function(t_maxiterPCG, t_tolPCG, t_Cova, t_yVec, t_tau, t_SparseGRM, t_LOCOList, t_eta) {
+    invisible(.Call(`_POLMM_setPOLMMGENEobj`, t_maxiterPCG, t_tolPCG, t_Cova, t_yVec, t_tau, t_SparseGRM, t_LOCOList, t_eta))
+}
+
+setPOLMMGENEchr <- function(t_LOCOList, t_excludechr) {
+    invisible(.Call(`_POLMM_setPOLMMGENEchr`, t_LOCOList, t_excludechr))
+}
+
+getStatVarS <- function(t_GMat) {
+    .Call(`_POLMM_getStatVarS`, t_GMat)
+}
+
 getobjP <- function(t_Cova, t_yMat, t_muMat, t_iRMat) {
     .Call(`_POLMM_getobjP`, t_Cova, t_yMat, t_muMat, t_iRMat)
 }
