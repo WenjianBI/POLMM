@@ -31,6 +31,45 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// setPOLMMGENEobj
+void setPOLMMGENEobj(int t_maxiterPCG, double t_tolPCG, arma::mat t_Cova, arma::Col<int> t_yVec, double t_tau, Rcpp::List t_SparseGRM, Rcpp::List t_LOCOList, arma::vec t_eta);
+RcppExport SEXP _POLMM_setPOLMMGENEobj(SEXP t_maxiterPCGSEXP, SEXP t_tolPCGSEXP, SEXP t_CovaSEXP, SEXP t_yVecSEXP, SEXP t_tauSEXP, SEXP t_SparseGRMSEXP, SEXP t_LOCOListSEXP, SEXP t_etaSEXP) {
+BEGIN_RCPP
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< int >::type t_maxiterPCG(t_maxiterPCGSEXP);
+    Rcpp::traits::input_parameter< double >::type t_tolPCG(t_tolPCGSEXP);
+    Rcpp::traits::input_parameter< arma::mat >::type t_Cova(t_CovaSEXP);
+    Rcpp::traits::input_parameter< arma::Col<int> >::type t_yVec(t_yVecSEXP);
+    Rcpp::traits::input_parameter< double >::type t_tau(t_tauSEXP);
+    Rcpp::traits::input_parameter< Rcpp::List >::type t_SparseGRM(t_SparseGRMSEXP);
+    Rcpp::traits::input_parameter< Rcpp::List >::type t_LOCOList(t_LOCOListSEXP);
+    Rcpp::traits::input_parameter< arma::vec >::type t_eta(t_etaSEXP);
+    setPOLMMGENEobj(t_maxiterPCG, t_tolPCG, t_Cova, t_yVec, t_tau, t_SparseGRM, t_LOCOList, t_eta);
+    return R_NilValue;
+END_RCPP
+}
+// setPOLMMGENEchr
+void setPOLMMGENEchr(Rcpp::List t_LOCOList, std::string t_excludechr);
+RcppExport SEXP _POLMM_setPOLMMGENEchr(SEXP t_LOCOListSEXP, SEXP t_excludechrSEXP) {
+BEGIN_RCPP
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< Rcpp::List >::type t_LOCOList(t_LOCOListSEXP);
+    Rcpp::traits::input_parameter< std::string >::type t_excludechr(t_excludechrSEXP);
+    setPOLMMGENEchr(t_LOCOList, t_excludechr);
+    return R_NilValue;
+END_RCPP
+}
+// getStatVarS
+Rcpp::List getStatVarS(arma::mat t_GMat);
+RcppExport SEXP _POLMM_getStatVarS(SEXP t_GMatSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< arma::mat >::type t_GMat(t_GMatSEXP);
+    rcpp_result_gen = Rcpp::wrap(getStatVarS(t_GMat));
+    return rcpp_result_gen;
+END_RCPP
+}
 // getobjP
 Rcpp::List getobjP(arma::mat t_Cova, arma::mat t_yMat, arma::mat t_muMat, arma::mat t_iRMat);
 RcppExport SEXP _POLMM_getobjP(SEXP t_CovaSEXP, SEXP t_yMatSEXP, SEXP t_muMatSEXP, SEXP t_iRMatSEXP) {
@@ -73,6 +112,9 @@ END_RCPP
 
 static const R_CallMethodDef CallEntries[] = {
     {"_POLMM_fitPOLMMcpp", (DL_FUNC) &_POLMM_fitPOLMMcpp, 15},
+    {"_POLMM_setPOLMMGENEobj", (DL_FUNC) &_POLMM_setPOLMMGENEobj, 8},
+    {"_POLMM_setPOLMMGENEchr", (DL_FUNC) &_POLMM_setPOLMMGENEchr, 2},
+    {"_POLMM_getStatVarS", (DL_FUNC) &_POLMM_getStatVarS, 1},
     {"_POLMM_getobjP", (DL_FUNC) &_POLMM_getobjP, 4},
     {"_POLMM_outputadjGFast", (DL_FUNC) &_POLMM_outputadjGFast, 2},
     {"_POLMM_getyMatR", (DL_FUNC) &_POLMM_getyMatR, 3},
