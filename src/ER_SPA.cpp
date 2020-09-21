@@ -120,13 +120,17 @@ double getPvalER(arma::uvec t_yVec,     // n x 1 vector, from 1 to J
   
   double pvalER = 0;
   double absStatObs = std::abs(StatObs);
+  std::cout << "nER:\t" << nER << std::endl;
   for(int i = 0; i < nER; i++){
+    std::cout << "i:\t" << i << std::endl;
     double absStatTmp = std::abs(StatVec(i));
+    std::cout << "absStatObs:\t" << absStatObs << "\tabsStatTmp:\t" << absStatTmp << std::endl;
     if(absStatObs > absStatTmp + eps){
       pvalER += getProb(SeqMat.col(i), t_muMat);
     }else if(absStatObs > absStatTmp - eps){
       pvalER += 0.5 * getProb(SeqMat.col(i), t_muMat);
     }
+    std::cout << "pvalER:\t" << pvalER << std::endl;
   }
   
   // arma::uvec idxVec1 = arma::find(abs(StatVec) > std::abs(StatObs) + eps); // abs(double) return int;
