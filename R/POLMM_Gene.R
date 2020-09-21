@@ -158,7 +158,6 @@ POLMM.Gene = function(objNull,
   Ratio0Vec = as.vector(OutList$Ratio0Vec)
   adjGMat = OutList$adjGMat
 
-  
   out_SPA_ER = adj_SPA_ER(GMat, StatVec, VarSVec, StdStatVec,
                           idxERVec, idxSPAVec,
                           muMat1, iRMat, VarWVec, Ratio0Vec, adjGMat) # first check the non-robust version, no adjustment
@@ -327,7 +326,7 @@ check.SKAT.control = function(SKAT.control)
     if(method == "Burden")
       SKAT.control$r.corr = 1;
     
-    if(method == "SKATO")
+    if(method == "SKAT-O")
       SKAT.control$r.corr = c(0, 0.1^2, 0.2^2, 0.3^2, 0.5^2, 0.5, 1);
   }
   
