@@ -123,7 +123,7 @@ POLMM.Gene = function(objNull,
   SparseGRM = updateSparseGRM(SparseGRM, objNull$subjIDs)
   J = max(objNull$yVec)
   NonZero_cutoff = floor(log(50000, J))  # for efficient resampling (ER)
-  StdStat_cutoff = SPAcutoff
+  StdStat_cutoff = SKAT.control$SPAcutoff
   
   # set an objective for Gene-based analysis
   setPOLMMGENEobj(objNull$controlList$maxiterPCG, 
@@ -279,7 +279,8 @@ check.SKAT.control = function(SKAT.control)
                               impute.MAF.cohort = "step1",
                               r.corr = NULL,
                               missing_cutoff = 0.15, 
-                              max_maf = 0.05)
+                              max_maf = 0.05,
+                              SPAcutoff = 2)
                               # to be continued)
   
   # use the default setting or update it
