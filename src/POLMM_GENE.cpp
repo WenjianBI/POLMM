@@ -91,7 +91,7 @@ Rcpp::List POLMMGENEClass::getStatVarS(arma::mat t_GMat,
   arma::uvec whichSPA = arma::find(idxSPAVec == 1);
   VarWVec = VarWVec.elem(whichSPA);
   Ratio0Vec = Ratio0Vec.elem(whichSPA);
-  adjGMat = adjGMat.rows(whichSPA);
+  adjGMat = adjGMat.cols(whichSPA);
   
   Rcpp::List OutList = List::create(Named("StatVec") = StatVec,
                                     Named("VarSMat") = VarSMat,
