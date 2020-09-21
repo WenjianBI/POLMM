@@ -61,7 +61,7 @@ arma::vec getStatVec(arma::umat t_SeqMat,   // n x J^n matrix
   
   for(int i = 0; i < nER; i++){
     double a2 = 0;
-    for(int j = 0; j < n-1; j++){
+    for(int j = 0; j < n; j++){
       int idxL = t_SeqMat(j, i); // from 0 to J-1, level index
       if(idxL != J-1){
         a2 += A(j,idxL);
