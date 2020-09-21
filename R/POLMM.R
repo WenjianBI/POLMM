@@ -225,10 +225,6 @@ POLMM = function(objNull,
         VarW0 = VarW - VarW1
         Ratio0 = VarW0/VarW
         
-        cat("VarW0:\t",VarW0,"\n")
-        cat("Ratio0:\t",Ratio0,"\n")
-        cat("adjGVec[posG1]:\t",adjGVec[posG1],"\n")
-        
         res.spa <- fastSaddle_Prob(Stat, VarP, VarW, Ratio0, K1roots,
                                    adjGVec[posG1], muMat1[posG1,], iRMat[posG1,])
         pval.spa = res.spa$pval
