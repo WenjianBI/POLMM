@@ -97,6 +97,9 @@ POLMM.Gene = function(objNull,
                       SparseGRM,
                       SKAT.control = NULL)
 {
+  if(class(objNull) != "POLMM_NULL_Model")
+    stop("class(objNull) should be 'POLMM_NULL_Model'.")
+  
   # check the setting of SKAT.control, if not specified, the default setting will be used
   SKAT.control = check.SKAT.control(SKAT.control)
   

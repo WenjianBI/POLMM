@@ -224,6 +224,11 @@ POLMM = function(objNull,
         VarW1 = sum(VarWVec[posG1])
         VarW0 = VarW - VarW1
         Ratio0 = VarW0/VarW
+        
+        std::cout << "VarW0:\t" << VarW0 << std::endl;
+        std::cout << "Ratio0:\t" << Ratio0 << std::endl;
+        std::cout << "adjGVec[posG1]:\t" << adjGVec[posG1] << std::endl;
+        
         res.spa <- fastSaddle_Prob(Stat, VarP, VarW, Ratio0, K1roots,
                                    adjGVec[posG1], muMat1[posG1,], iRMat[posG1,])
         pval.spa = res.spa$pval
