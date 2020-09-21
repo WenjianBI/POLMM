@@ -276,7 +276,7 @@ struct getKinbVecParallel : public Worker
 
 arma::vec getKinbVec(arma::vec t_bVec, DenseGRMClass* t_ptrDenseGRM, string t_excludeChr, int t_grainSize)
 {
-  int M = t_ptrDenseGRM->getM();
+  // int M = t_ptrDenseGRM->getM();
   Rcpp::List chrIndexLOCO = t_ptrDenseGRM->getChrIndexLOCO();
   
   arma::Mat<int> ChrIdx = chrIndexLOCO[t_excludeChr];

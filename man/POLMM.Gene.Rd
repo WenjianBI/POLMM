@@ -6,7 +6,7 @@
 \usage{
 POLMM.Gene(
   objNull,
-  Geno.mtx,
+  GMat,
   chrom,
   SparseGRM,
   SKAT.control = NULL,
@@ -17,11 +17,11 @@ POLMM.Gene(
 \arguments{
 \item{objNull}{the output of the POLMM_Null_Model() function}
 
-\item{Geno.mtx}{a numeric genotype matrix with each row as a subject and each column as a marker in a region or gene. 
+\item{GMat}{a numeric genotype matrix with each row as a subject and each column as a marker in a region or gene. 
 Column names of marker IDs and row names of individual IDs are required.
 Missng genotype should be coded as in argument 'G.missing'. Both hard-called and imputed genotype are supported.}
 
-\item{chrom}{a character to specify chromosome of the markers in Geno.mtx. Must be specified unless LOCO = F.}
+\item{chrom}{a character to specify chromosome of the markers in GMat. Must be specified unless LOCO = F.}
 
 \item{SPAcutoff}{a standard deviation cutoff (default=2). If the standardized test statistic < SPAcutoff, normal approximation is used, otherwise, saddlepoint approximation is used.}
 
@@ -39,7 +39,7 @@ If "Dom", GVec = ifelse(GVec >= 1, 1, 0), if "Rec", GVec = ifelse(GVec <= 1, 0, 
 }
 \value{
 an R matrix with the following elements
-\item{ID}{Marker IDs from colnames(Geno.mtx)}
+\item{ID}{Marker IDs from colnames(GMat)}
 \item{chr}{Chromosome name from chrVec}
 \item{MAF}{MAFs of the markers}
 \item{missing.rate}{Missing rates of the markers}
@@ -78,13 +78,13 @@ objNull$tau
 names(objNull$LOCOList)
 
 set.seed(123)
-Geno.mtx = matrix(rbinom(10000,2,0.3),1000,10)
-rownames(Geno.mtx) = egData$IID
-colnames(Geno.mtx) = paste0("rs",1:10)
-chrVec = chrom = "1"  # equivalant to chrVec = rep("1", ncol(Geno.mtx))
-outPOLMM = POLMM(objNull, Geno.mtx, chrVec)
+GMat = matrix(rbinom(10000,2,0.3),1000,10)
+rownames(GMat) = egData$IID
+colnames(GMat) = paste0("rs",1:10)
+chrVec = chrom = "1"  # equivalant to chrVec = rep("1", ncol(GMat))
+outPOLMM = POLMM(objNull, GMat, chrVec)
 
-outList = POLMM.Gene(objNull, Geno.mtx, chrom, SparseGRM)
+outList = POLMM.Gene(objNull, GMat, chrom, SparseGRM)
 
 outPOLMM
 outList

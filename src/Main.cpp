@@ -105,11 +105,12 @@ POLMMGENEClass POLMMGENEobj;
 void setPOLMMGENEobj(int t_maxiterPCG,
                      double t_tolPCG,
                      arma::mat t_Cova,
-                     arma::Col<int> t_yVec,     // should be from 1 to J
+                     arma::uvec t_yVec,     // should be from 1 to J
                      double t_tau,
                      Rcpp::List t_SparseGRM,    // results of function getKinMatList()
                      Rcpp::List t_LOCOList,
-                     arma::vec t_eta)
+                     arma::vec t_eta,
+                     int t_nMaxNonZero)
 {
   Rcpp::List KinMatList = getKinMatList(t_SparseGRM);
   POLMMGENEobj.setPOLMMGENEobj(t_maxiterPCG, 
@@ -119,7 +120,8 @@ void setPOLMMGENEobj(int t_maxiterPCG,
                                t_tau,
                                KinMatList,
                                t_LOCOList,
-                               t_eta);
+                               t_eta,
+                               t_nMaxNonZero);
 }
 
 // [[Rcpp::export]]
@@ -129,8 +131,22 @@ void setPOLMMGENEchr(Rcpp::List t_LOCOList, std::string t_excludechr)
 }
 
 // [[Rcpp::export]]
-Rcpp::List getStatVarS(arma::mat t_GMat)
+Rcpp::List getStatVarS(arma::mat t_GMat,
+                       double t_NonZero_cutoff,
+                       double t_StdStat_cutoff)
 {
-  Rcpp::List OutList = POLMMGENEobj.getStatVarS(t_GMat);
+  Rcpp::List OutList = POLMMGENEobj.getStatVarS(t_GMat,
+                                                t_NonZero_cutoff,
+                                                t_StdStat_cutoff);
   return(OutList);
 }
+
+// [[Rcpp::export]]
+double getPvalERtoR(arma::vec t_GVec)
+{
+  double PvalER = POLMMGENEobj.getPvalERinClass(t_GVec);
+  return PvalER;
+}
+
+
+

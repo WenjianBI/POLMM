@@ -214,15 +214,16 @@ POLMM = function(objNull,
       VarWVec = RPsiR * adjGVec^2
       VarW = sum(VarWVec)
       # VarW0 = sum(VarWVec[posG0])
-      VarW1 = sum(VarWVec[posG1])
-      VarW0 = VarW - VarW1
-      Ratio0 = VarW0/VarW
+      
       VarP = VarW * r
       z = abs(Stat)/sqrt(VarP)
       beta = Stat / VarP
       pval.spa = pval.norm = 2*pnorm(-1*z, lower.tail=T)
       
       if(z > SPAcutoff){
+        VarW1 = sum(VarWVec[posG1])
+        VarW0 = VarW - VarW1
+        Ratio0 = VarW0/VarW
         res.spa <- fastSaddle_Prob(Stat, VarP, VarW, Ratio0, K1roots,
                                    adjGVec[posG1], muMat1[posG1,], iRMat[posG1,])
         pval.spa = res.spa$pval

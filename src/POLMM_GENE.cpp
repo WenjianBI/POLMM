@@ -1,41 +1,84 @@
 
 // [[Rcpp::depends(RcppArmadillo)]]
 #include <RcppArmadillo.h>
-
+#include <cmath>
 #include <string>
 
 #include "SubFunc.hpp"
 #include "POLMM_GENE.hpp"
+#include "ER_SPA.hpp"
 
 namespace POLMMGENE{
 
 using namespace Rcpp;
 using namespace std;
 
-Rcpp::List POLMMGENEClass::getStatVarS(arma::mat t_GMat)
+Rcpp::List POLMMGENEClass::getStatVarS(arma::mat t_GMat, 
+                                       double t_NonZero_cutoff,
+                                       double t_StdStat_cutoff)
 {
-  int n = t_GMat.n_rows;  // number of samples
-  int q = t_GMat.n_cols;  // number of markers in the region
+  int n = t_GMat.n_rows;       // number of samples
+  int q = t_GMat.n_cols;       // number of markers in the region
   
-  arma::vec StatVec(q);
-  arma::mat VarSMat(q, q);
-  arma::mat adjGMat(n, q);
-  arma::mat ZPZ_adjGMat(n, q);
+  arma::vec StatVec(q);        // vector of statistics
+  arma::mat VarSMat(q, q);     // variance matrix (after adjusting for relatedness)
+  arma::mat adjGMat(n, q);     // adjusted genotype vector
+  arma::mat ZPZ_adjGMat(n, q); // t(Z) %*% P %*% Z %*% adjGMat
+  arma::vec NonZeroVec(q);     // vector of NonZero number [for method selection]
+  arma::vec StdStatVec(q);     // vector of standardized statistics [for method selection]
+  arma::vec VarWVec(q);        // vector of variance (without adjusting for relatedness) [for fastSPA]
+  arma::vec Ratio0Vec(q);      // vector of Ratio0 [for fastSPA]
+  arma::uvec idxERVec(q, arma::fill::zeros);       // 0 or 1: vector of indicator for markers to ER 
+  arma::uvec idxSPAVec(q, arma::fill::zeros);      // 0 or 1: vector of indicator for markers to SPA [for fastSPA]
   
+  // loop for all markers
   for(int i = 0; i < q; i++){
     
-    // get adjusted GVec
+    // get adjusted GVec each marker
     arma::vec GVec = t_GMat.col(i);
-    arma::vec adjGVec = getadjGFast(GVec, m_objP["XXR_Psi_RX_new"], m_objP["XR_Psi_R_new"], m_objP["n"], m_objP["J"], m_objP["p"]);
+    arma::vec adjGVec = getadjGFast(GVec, m_objP["XXR_Psi_RX_new"], m_objP["XR_Psi_R_new"], 
+                                    m_objP["n"], m_objP["p"]);
     adjGMat.col(i) = adjGVec;
     
-    // get Stat for the marker
-    double Stat = getStatFast(adjGVec, m_objP["RymuVec"], m_objP["n"]);
+    // get Stat for each marker
+    double Stat = getStatFast(adjGVec, m_objP["RymuVec"]);
     StatVec(i) = Stat;
     
-    // get t(Z) %*% P %*% Z %*% adjGVec
+    // get t(Z) %*% P %*% Z %*% adjGVec for each marker
     arma::vec ZPZ_adjGVec = get_ZPZ_adjGVec(adjGVec, m_excludechr);
     ZPZ_adjGMat.col(i) = ZPZ_adjGVec;
+    double VarS = as_scalar(adjGVec.t() * ZPZ_adjGVec);
+    VarSMat(i, i) = VarS;
+    
+    // use cutoff to determine normal approximation, SPA, and ER
+    arma::uvec idxNonZero = arma::find(GVec > 0.1); // we have changed (GVec < 0.2) to 0
+    int NonZero = idxNonZero.size(); 
+    double StdStat = std::abs(Stat) / sqrt(VarS);
+    NonZeroVec(i) = NonZero;
+    StdStatVec(i) = StdStat;
+    
+    // Efficient Resampling (ER)
+    if(NonZero <= t_NonZero_cutoff){  
+      idxERVec(i) = 1;
+    }
+    
+    // Saddlepoint approximation (SPA)
+    if(NonZero > t_NonZero_cutoff && StdStat > t_StdStat_cutoff){
+      idxSPAVec(i) = 1;
+      // check getVarWFast()
+      double VarW = 0;
+      double VarW1 = 0;
+      for(int j = 0; j < n; j++){
+        double temp = m_RPsiRVec(j) * adjGVec(j) * adjGVec(j);
+        VarW += temp;
+        if(GVec(j) > 0.1)
+          VarW1 += temp;
+      }
+      double VarW0 = VarW - VarW1;
+      double Ratio0 = VarW0 / VarW;
+      VarWVec(i) = VarW;
+      Ratio0Vec(i) = Ratio0;
+    }
   }
   
   for(int i = 0; i < q; i++){
@@ -43,23 +86,39 @@ Rcpp::List POLMMGENEClass::getStatVarS(arma::mat t_GMat)
       double cov = as_scalar(adjGMat.col(i).t() * ZPZ_adjGMat.col(j));
       VarSMat(i, j) = VarSMat(j,i) = cov;
     }
-    double var = as_scalar(adjGMat.col(i).t() * ZPZ_adjGMat.col(i));
-    VarSMat(i, i) = var;
   }
   
-  Rcpp::List OutList = List::create(Named("StatVec") = StatVec,             
-                                    Named("VarSMat") = VarSMat);
+  arma::uvec whichSPA = arma::find(idxSPAVec == 1);
+  VarWVec = VarWVec.elem(whichSPA);
+  Ratio0Vec = Ratio0Vec.elem(whichSPA);
+  adjGMat = adjGMat.rows(whichSPA);
+  
+  Rcpp::List OutList = List::create(Named("StatVec") = StatVec,
+                                    Named("VarSMat") = VarSMat,
+                                    Named("NonZeroVec") = NonZeroVec,
+                                    Named("StdStatVec") = StdStatVec,
+                                    // the following 2 elements are to determine which markers should use fastSPA or ER
+                                    Named("idxERVec") = idxERVec,
+                                    Named("idxSPAVec") = idxSPAVec,
+                                    // the following 5 elements are only for fastSPA, determined by idxSPAVec
+                                    Named("muMat") = m_muMat,
+                                    Named("iRMat") = m_iRMat,
+                                    Named("VarWVec") = VarWVec,           
+                                    Named("Ratio0Vec") = Ratio0Vec,
+                                    Named("adjGMat") = adjGMat);
   return OutList;
 }
+
 
 void POLMMGENEClass::setPOLMMGENEobj(int t_maxiterPCG,
                                      double t_tolPCG,
                                      arma::mat t_Cova,
-                                     arma::Col<int> t_yVec,     // should be from 1 to J
+                                     arma::uvec t_yVec,         // should be from 1 to J
                                      double t_tau,
                                      Rcpp::List t_SparseGRM,    // results of function getKinMatList()
                                      Rcpp::List t_LOCOList,
-                                     arma::vec t_eta)
+                                     arma::vec t_eta,
+                                     int t_nMaxNonZero)
 {
   m_flagSparseGRM = true;
   m_maxiterPCG = t_maxiterPCG; 
@@ -79,6 +138,8 @@ void POLMMGENEClass::setPOLMMGENEobj(int t_maxiterPCG,
   m_SparseGRM = t_SparseGRM;
   m_LOCOList = t_LOCOList;
   m_eta = t_eta;
+  
+  m_SeqMat = makeSeqMat(t_nMaxNonZero, m_J);
 }
 
 void POLMMGENEClass::setPOLMMGENEchr(Rcpp::List t_LOCOList, string t_excludechr)
@@ -95,6 +156,8 @@ void POLMMGENEClass::setPOLMMGENEchr(Rcpp::List t_LOCOList, string t_excludechr)
   m_iRMat = temp2;
 
   m_objP = getobjP(m_Cova, m_yMat, m_muMat, m_iRMat);
+  arma::vec temp3 = m_objP["RPsiR"];
+  m_RPsiRVec = temp3;
   
   // the below is to make m_iSigmaX_XSigmaX
   arma::mat iSigma_CovaMat(m_n * (m_J-1), m_p);
@@ -333,6 +396,25 @@ arma::mat POLMMGENEClass::getyMat()
     yMat(i, m_yVec(i)-1) = 1;
   return(yMat);
 }
+
+
+double POLMMGENEClass::getPvalERinClass(arma::vec t_GVec)
+{
+  // here, we use 0.1 to be consistent with the imputation step, imputation and allele flip should be finished in previous steps
+  arma::uvec idxVec = arma::find(t_GVec > 0.1);  
+  int n1 = idxVec.size();
+  arma::umat SeqMat = updateSeqMat(m_SeqMat, n1, m_J);
+  
+  // only use subjects in idxVec
+  arma::vec GVec = t_GVec.elem(idxVec);
+  arma::mat muMat = m_muMat.rows(idxVec);
+  arma::uvec yVec = m_yVec.elem(idxVec); // from 1 to J
+  arma::mat iRMat = m_iRMat.rows(idxVec);
+  
+  double pvalER = getPvalER(yVec, GVec, muMat, iRMat);
+  return pvalER;
+}
+
 
 }
 

@@ -4,20 +4,14 @@
 #' Test for association between genetic variants and an ordinal categorical variable via Proportional Odds Logistic Mixed Model (POLMM-Gene)
 #' 
 #' @param objNull the output of the POLMM_Null_Model() function 
-#' @param Geno.mtx a numeric genotype matrix with each row as a subject and each column as a marker in a region or gene. 
-#'                 Column names of marker IDs and row names of individual IDs are required.
-#'                 Missng genotype should be coded as in argument 'G.missing'. Both hard-called and imputed genotype are supported.
-#' @param chrom a character to specify chromosome of the markers in Geno.mtx. Must be specified unless LOCO = F.
-#' @param SPAcutoff a standard deviation cutoff (default=2). If the standardized test statistic < SPAcutoff, normal approximation is used, otherwise, saddlepoint approximation is used.
-#' @param maxMAF a cutoff of the minimal minor allele frequencies (MAFs). Any markers with MAF < minMAF will be excluded from the analysis.
-#' @param maxMissing a cutoff of the maximal missing rate. Any markers with missing rate > maxMissing will be excluded from the analysis.
-#' @param impute.method a character string (default: "fixed") to specify the method to impute missing genotypes.
-#'                      "fixed" imputes missing genotypes (NA) by assigning the mean genotype value (i.e. 2p where p is MAF).
-#' @param G.model a character string (default: "Add") to specify additive ("Add"), dominant ("Dom"), or recessive ("Rec") model. 
-#'                If "Dom", GVec = ifelse(GVec >= 1, 1, 0), if "Rec", GVec = ifelse(GVec <= 1, 0, 1). Be very careful if the gneotyp is imputed data.
-#' @param G.missing the code for missing genotype (default=NA). For plink input, G.missing = -9.
+#' @param GMat a numeric genotype matrix with each row as a subject and each column as a marker in a region or gene.
+#'             Name of marker set, column names of marker IDs, and row names of individual IDs are all required.
+#'             Missng genotype should be coded as 9 or NA. Both hard-called and imputed genotype are supported.
+#' @param chrom a character to specify chromosome of the markers in GMat. Must be specified unless LOCO = F when fitting the null model.
+#' @param SparseGRM an object of class "SparseGRM", check help(getSparseGRM) for more details.
+#' @param SKAT.control a list of parameters for controlling the POLMM.Gene(). Check 'Details' Section for more details.
 #' @return an R matrix with the following elements
-#' \item{ID}{Marker IDs from colnames(Geno.mtx)}
+#' \item{ID}{Marker IDs from colnames(GMat)}
 #' \item{chr}{Chromosome name from chrVec}
 #' \item{MAF}{MAFs of the markers}
 #' \item{missing.rate}{Missing rates of the markers}
@@ -28,7 +22,34 @@
 #' \item{pval.norm}{p values calculated from normal approximation}
 #' \item{pval.spa}{p values calculated from saddlepoint approximation}
 #' \item{switch.allele}{a logical value indicating if the REF/ALT alleles were switched, if AF > 0.5, we use GVec = 2-GVec, and then give switch.allele=T. This is useful to estimate the effect direction.}
-#' @examples 
+#' @details 
+#' More information about the list of 'SKAT.control'
+#' \itemize{
+#' \item{memoryChunk: Size (Gb) for each memory chunk when reading in Plink file [default=2].}
+#' \item{seed: An integer as a random seed [default=12345678].}
+#' \item{tracenrun: Number of runs for trace estimator [default=30].}
+#' \item{maxiter: Maximum number of iterations used to fit the null POLMM [default=100].}
+#' \item{tolBeta: Positive tolerance: the iterations converge when |beta - beta_old| / (|beta| + |beta_old| + tolBeta) < tolBeta [default=0.001].}
+#' \item{tolTau: Positive tolerance: the iterations converge when |tau - tau_old| / (|tau| + |tau_old| + tolTau) < tolTau [default=0.002].}
+#' \item{tau: Initial value of the variance component (tau) [default=0.2].}
+#' \item{maxiterPCG: Maximum number of iterations for PCG to converge [default=100].}
+#' \item{tolPCG: Positive tolerance for PCG to converge [default=1e-6].}
+#' \item{maxiterEps: Maximum number of iterations for cutpoints estimation [default=100].}
+#' \item{tolEps: Positive tolerance for cutpoints estimation to converge [default=1e-10].}
+#' \item{minMafVarRatio: Minimal value of MAF cutoff to select markers (from Plink file) to estimate variance ratio [default=0.1].}
+#' \item{maxMissingVarRatio: Maximal value of missing rate cutoff to select markers (from Plink file) to estimate variance ratio [default=0.1].}
+#' \item{nSNPsVarRatio: Initial number of the selected markers to estimate variance ratio [default=20], the number will be automatically added by 10 until the coefficient of variantion (CV) of the variance ratio estimate is below CVcutoff.}
+#' \item{CVcutoff: Minimal cutoff of coefficient of variantion (CV) for variance ratio estimation [default=0.0025].}
+#' \item{LOCO: Whether to apply the leave-one-chromosome-out (LOCO) approach [default=TRUE].}
+#' \item{numThreads: Number of threads (CPUs) to use. Only valid if dense GRM is used, default is "auto", that is, RcppParallel::defaultNumThreads() [default="auto"].}
+#' \item{stackSize: Stack size (in bytes) to use for worker threads. For more details, check help(RcppParallel::setThreadOptions) [default="auto"].}
+#' \item{grainSize: Grain size of a parallel algorithm sets a minimum chunk size for parallelization. In other words, at what point to stop processing input on separate threads [default=1].}
+#' \item{minMafGRM: Minimal value of MAF cutoff to select markers (from Plink files) to construct dense GRM [default=0.01].}
+#' \item{maxMissingGRM: Maximal value of missing rate to select markers (from Plink files) to construct dense GRM [default=0.1].}
+#' \item{showInfo: Whether to show more detailed information for trouble shooting [default=TRUE].}
+#' \item{onlyCheckTime: Not fit the null model, only check the computation time of reading Plink files and running 30 KinbVec() functions [default=FALSE].}
+#' }
+#' #' @examples 
 #' ## We use a Plink file with 10,000 markers and 1,000 subjects to constract GRM for demonstration. 
 #' ## For real data analysis, we recommend >= 100,000 common markers (MAF > 0.05 or 0.01).
 #' ## Selection of the common markers is similar as in Principle Components Analysis (PCA).
@@ -52,13 +73,13 @@
 #' names(objNull$LOCOList)
 #' 
 #' set.seed(123)
-#' Geno.mtx = matrix(rbinom(10000,2,0.3),1000,10)
-#' rownames(Geno.mtx) = egData$IID
-#' colnames(Geno.mtx) = paste0("rs",1:10)
-#' chrVec = chrom = "1"  # equivalant to chrVec = rep("1", ncol(Geno.mtx))
-#' outPOLMM = POLMM(objNull, Geno.mtx, chrVec)
+#' GMat = matrix(rbinom(10000,2,0.3),1000,10)
+#' rownames(GMat) = egData$IID
+#' colnames(GMat) = paste0("rs",1:10)
+#' chrVec = chrom = "1"  # equivalant to chrVec = rep("1", ncol(GMat))
+#' outPOLMM = POLMM(objNull, GMat, chrVec)
 #' 
-#' outList = POLMM.Gene(objNull, Geno.mtx, chrom, SparseGRM)
+#' outList = POLMM.Gene(objNull, GMat, chrom, SparseGRM)
 #' 
 #' outPOLMM
 #' outList
@@ -71,21 +92,19 @@
 #' @import SKAT
 
 POLMM.Gene = function(objNull,
-                      Geno.mtx,            # n x q matrix, where n is number of subjects and m is number of markers
+                      GMat,                    # n x q matrix, where n is number of subjects and m is number of markers
                       chrom,
                       SparseGRM,
-                      SKAT.control = NULL,
-                      SPAcutoff = 2,
-                      G.model = "Add")
+                      SKAT.control = NULL)
 {
-  n = nrow(Geno.mtx)
-  # check and use the default setting of SKAT.control
+  # check the setting of SKAT.control, if not specified, the default setting will be used
   SKAT.control = check.SKAT.control(SKAT.control)
   
-  GMat.list = Check_GMat(Geno.mtx, SetID, 
+  GMat.list = Check_GMat(GMat, objNull,
                          kernel = SKAT.control$kernel, 
                          weights.beta = SKAT.control$weights.beta, 
-                         impute.method = SKAT.control$impute.method, 
+                         impute.method = SKAT.control$impute.method,
+                         impute.MAF.cohort = SKAT.control$impute.MAF.cohort,
                          missing_cutoff = SKAT.control$missing_cutoff, 
                          max_maf = SKAT.control$max_maf)
   
@@ -94,15 +113,19 @@ POLMM.Gene = function(objNull,
     return(outList)
   }
   
-  # extract information from output of Check_GMat()
-  Geno.mtx = GMat.list$Geno.mtx
+  # extract information from GMat.list
+  GMat = GMat.list$GMat
   weights = GMat.list$weights
   AlleleFlip.Vec = GMat.list$AlleleFlip.Vec
-  MAF.Vec = GMat.list$MAF.Vec
-  MAC.Vec = MAF.Vec * 2 * n   # this might be slightly different from "true" MAC due to the genotype imputation, but should be OK since we have limited the missing_rate
+  MAF.Vec = GMat.list$MAF.Vec  # this might be slightly different from "true" MAF due to the genotype imputation, but should be OK since we have limited the missing_rate
   
-  # update SparseGRM and set an objective for Gene-based analysis
+  # update SparseGRM 
   SparseGRM = updateSparseGRM(SparseGRM, objNull$subjIDs)
+  J = max(objNull$yVec)
+  NonZero_cutoff = floor(log(50000, J))  # for efficient resampling (ER)
+  StdStat_cutoff = SPAcutoff
+  
+  # set an objective for Gene-based analysis
   setPOLMMGENEobj(objNull$controlList$maxiterPCG, 
                   objNull$controlList$tolPCG,
                   objNull$Cova,
@@ -110,34 +133,47 @@ POLMM.Gene = function(objNull,
                   objNull$tau,
                   SparseGRM,
                   objNull$LOCOList,
-                  objNull$eta)
+                  objNull$eta,
+                  NonZero_cutoff)
   
   setPOLMMGENEchr(objNull$LOCOList, 
                   chrom)
   
   ##
-  
-  OutList = getStatVarS(Geno.mtx)
-  
-  StatVec = as.vector(OutList$StatVec)
+  OutList = getStatVarS(GMat, NonZero_cutoff, StdStat_cutoff)
+
+  # output basic information including Stat, stdStat, and VarSMat
+  StatVec = as.vector(OutList$StatVec)  # as.vector(): transform matrix to vector
+  StdStatVec = as.vector(OutList$StdStatVec)
   VarSMat = OutList$VarSMat
-  
   VarSVec = diag(VarSMat)
   
-  out_SPA_ER = adj_SPA_ER(Geno.mtx, MAC.Vec, StatVec,  VarSVec, SPA.pval.cutoff = 0, ER.MAC.cutoff = 0) # first check the non-robust version, no adjustment
-  adjVarSVec = out_SPA_ER$adjVarSVec
+  # adjust the results based on SPA or ER
+  idxERVec = as.vector(OutList$idxERVec)
+  idxSPAVec = as.vector(OutList$idxSPAVec)
+  muMat = OutList$muMat
+  muMat1 = muMat[,-1*J]
+  iRMat = OutList$iRMat
+  VarWVec = as.vector(OutList$VarWVec)
+  Ratio0Vec = as.vector(OutList$Ratio0Vec)
+  adjGMat = OutList$adjGMat
+
+  
+  out_SPA_ER = adj_SPA_ER(GMat, StatVec, VarSVec, StdStatVec,
+                          idxERVec, idxSPAVec,
+                          muMat1, iRMat, VarWVec, Ratio0Vec, adjGMat) # first check the non-robust version, no adjustment
   
   adjPVec = out_SPA_ER$adjPVec
-  
-  ### add something about weights
-  
-  weights = Get_Weights(SKAT.control$kernel, MAF.Vec, SKAT.control$weights.beta)
+  PVec = out_SPA_ER$PVec
+  adjVarSVec = out_SPA_ER$adjVarSVec
   
   #########
   
   wStatVec = StatVec * weights
   
-  if(any(is.infinite(adjVarSVec))) stop("any(is.infinite(adjVarSVec))") # I want to know when this will happen
+  if(any(is.infinite(adjVarSVec))) 
+    stop("any(is.infinite(adjVarSVec))") # I want to know when this will happen
+  
   adjVarSVec = ifelse(is.infinite(adjVarSVec), 0, adjVarSVec)
   StatVec = ifelse(is.infinite(adjVarSVec), 0, StatVec)
   
@@ -181,74 +217,72 @@ POLMM.Gene = function(objNull,
   r.all = ifelse(r.all >= 0.999, 0.999, r.all)
   
   outList = try(SKAT:::Met_SKAT_Get_Pvalue(Score = wStatVec, Phi = wadjVarSMat,
-                                       r.corr = r.all, method = "optimal.adj", Score.Resampling = NULL),
-            silent = TRUE)
+                                           r.corr = r.all, method = "optimal.adj", Score.Resampling = NULL),
+                silent = TRUE)
+  
+  outList = list(outList = outList,
+                 PVec = PVec,
+                 adjPVec = adjPVec)
   
   # OutMat = as.data.frame(OutMat, stringsAsFactors=F)
   return(outList)
 }
 
-adj_SPA_ER = function(Geno.mtx,
-                      MAC.Vec,   # imputation should be finished before this step
-                      StatVec,
-                      VarSVec,
-                      SPA.pval.cutoff,
-                      ER.MAC.cutoff)
+adj_SPA_ER = function(GMat, StatVec, VarSVec, StdStatVec,
+                      idxERVec, idxSPAVec,
+                      muMat1, iRMat, VarWVec, Ratio0Vec, adjGMat)
 {
-  q = ncol(Geno.mtx)
+  # select markers to run robust testing based on ER and SPA
+  pos.ER = which(idxERVec == 1)
+  pos.SPA = which(idxSPAVec == 1)
+  idx.SPA = 1;
   
-  QVec = StatVec^2 / VarSVec  # follow a standard chi-squre distribution
+  QVec = StdStatVec^2
   adjPVec = PVec = pchisq(QVec, lower.tail = FALSE, df = 1)
   adjVarSVec = VarSVec
-  
-  pos.ER = which(MAC.Vec < ER.MAC.cutoff)
-  pos.SPA = which(MAC.Vec >= ER.MAC.cutoff & PVec < SPA.pval.cutoff)
+  K1roots = c(0,0)
   
   for(i in pos.ER){
-    adjPVec[i] = getPvalER(Geno.mtx[,i])
+    adjPVec[i] = getPvalERtoR(GMat[,i])
     adjVarSVec[i] = StatVec[i]^2 / qchisq(adjPVec[i], df = 1, lower.tail = FALSE)
   }
   
   for(i in pos.SPA){
-    adjPVec[i] = getPvalSPA(Geno.mtx[,i])
+    posG1 = which(GMat[,i] != 0)
+    adjGVec = adjGMat[,idx.SPA]
+    res.spa = fastSaddle_Prob(StatVec[i], VarSVec[i], 
+                              VarWVec[idx.SPA], Ratio0Vec[idx.SPA], 
+                              K1roots,
+                              adjGVec[posG1], muMat1[posG1,], iRMat[posG1,])
+    adjPVec[i] = res.spa$pval
     adjVarSVec[i] = StatVec[i]^2 / qchisq(adjPVec[i], df = 1, lower.tail = FALSE)
+    idx.SPA = idx.SPA + 1
   }
   
   adjVarSVec = ifelse(adjPVec == 0, StatVec^2 / 500, adjVarSVec)
   
-  out_SPA_ER = list(adjVarSVec = adjVarSVec, adjPVec = adjPVec)
+  out_SPA_ER = list(adjVarSVec = adjVarSVec, adjPVec = adjPVec, PVec = PVec)
   
   return(out_SPA_ER)
 }
 
-getPvalSPA = function()
-{
-  # to be continued
-}
-
-getPvalER = function()
-{
-  # to be continued
-}
-
-####### ---------- Check Argument ------------ #########
+####### ---------- Check Argument of SKAT ------------ #########
 
 check.SKAT.control = function(SKAT.control)
 {
   # the below is the default setting
   default.SKAT.control = list(kernel = "linear.weighted",
-                              method = "SKATO",
+                              method = "SKAT-O",
                               weights.beta = c(1,25),
                               weights = NULL,
                               impute.method = "bestguess",
+                              impute.MAF.cohort = "step1",
                               r.corr = NULL,
-                              is_check_genotype=TRUE,
-                              is_dosage = FALSE, 
                               missing_cutoff = 0.15, 
-                              max_maf = 1, 
-                              estimate_MAF = 1)
+                              max_maf = 0.05)
+                              # to be continued)
   
-  # use the default setting or update them
+  # use the default setting or update it
   if(is.null(SKAT.control)){
     SKAT.control = default.SKAT.control
   }else{
@@ -261,23 +295,29 @@ check.SKAT.control = function(SKAT.control)
   
   # check the parameters
   if(! SKAT.control$kernel %in% c("linear", "linear.weighted"))
-    stop("'kernel' should be 'linear' or 'linear.weighted'. ")
+    stop("'kernel' should be 'linear' or 'linear.weighted'. Check 'Details' for more details.")
   
   if(length(SKAT.control$weights.beta)!=2)
-    stop("length of 'weights.beta' should be 2.")
+    stop("length of 'weights.beta' should be 2. Check 'Details' for more details.")
+  
+  if(any(SKAT.control$weights.beta < 0))
+    stop("the two elements in 'weights.beta' should be non-negative. Check 'Details' for more details.")
   
   if(! SKAT.control$impute.method %in% c("fixed", "bestguess", "random"))
-    stop("'impute.method' should be 'fixed','bestguess', or 'random'. ")
+    stop("'impute.method' should be 'fixed','bestguess', or 'random'. Check 'Details' for more details.")
+  
+  if(! SKAT.control$impute.MAF.cohort %in% c("step1", "step2"))
+    stop("'impute.MAF.cohort' should be 'step1' or 'step2'. Check 'Details' for more details.")
   
   if(SKAT.control$missing_cutoff > 1 | SKAT.control$missing_cutoff < 0)
-    stop("'missing_cutoff' should be between 0 and 1.")
+    stop("'missing_cutoff' should be between 0 and 1. We recommand using 0.15.")
   
   if(SKAT.control$max_maf > 1 | SKAT.control$max_maf <= 0)
-    stop("'max_maf' should be between 0 and 1.")
+    stop("'max_maf' should be between 0 and 1. We recommand using 0.05 or 0.01.")
   
   method = SKAT.control$method
-  if(! method %in% c("SKAT", "Burden", "SKATO"))
-    stop("'method' should be 'SKAT', 'Burden', or 'SKATO'.")
+  if(! method %in% c("SKAT", "Burden", "SKAT-O"))
+    stop("'method' should be 'SKAT', 'Burden', or 'SKAT-O'. Check 'Details' for more details.")
   
   if(is.null(SKAT.control$r.corr)){
     if(method == "SKAT")
@@ -291,87 +331,115 @@ check.SKAT.control = function(SKAT.control)
   }
   
   if(any(SKAT.control$r.corr < 0 | SKAT.control$r.corr > 1))
-    stop("'r.corr should be between 0 and 1.'")
+    stop("'r.corr' should be between 0 and 1. Check 'Details' for more details.")
   
   return(SKAT.control)
 }
 
-####### ---------- Get Weights from MAF ---------- #######
 
-Get_Weights = function(kernel, MAF, weights.beta)
-{
-  if(kernel == "linear"){
-    weights = rep(1, length(MAF)) 
-  }
-  
-  if(kernel == "linear.weighted"){
-    weights = dbeta(MAF, weights.beta[1], weights.beta[2])
-  }
-  
-  return(weights)
-}
+####### ---------- Check the GMat matrix, and do imputation ---------- #######
 
-####### ---------- Check the Geno.mtx matrix, and do imputation ---------- #######
-
-Check_GMat = function(Geno.mtx, SetID, kernel, weights.beta, impute.method, missing_cutoff, max_maf)
+Check_GMat = function(GMat, objNull, kernel, weights.beta, impute.method, impute.MAF.cohort, missing_cutoff, max_maf)
 {
   # Number of subjects and SNPs
-  n = nrow(Geno.mtx)
-  q = ncol(Geno.mtx)
+  SetID = names(GMat);
+  SNPsID = colnames(GMat)
+  SubjID.step2 = rownames(GMat)
+  subjID.step1 = objNull$subjData
   
-  Geno.mtx[Geno.mtx > 1.8] = 2
-  Geno.mtx[Geno.mtx < 0.2] = 0
-  Geno.mtx[Geno.mtx == 9] = NA
+  if(is.null(SetID))
+    stop("names(GMat), that is, name of SNP set, is requried.")
   
-  MissingRate.Vec = colMeans(is.na(Geno.mtx))
-  MAF.Vec = colMeans(Geno.mtx, na.rm = T) / 2
-  Var.Vec = rowMeans((t(Geno.mtx) - 2 * MAF.Vec)^2)
+  if(is.null(SNPsID))
+    stop("colnames(GMat), that is, names of SNPs in the set, is requried.")
   
-  AlleleFlip.Vec = ifelse(MAF.Vec > 0.5, T, F)
-  MAF.Vec = ifelse(MAF.Vec > 0.5, 1 - MAF.Vec, MAF.Vec)
+  if(is.null(SubjID.step2))
+    stop("rownames(GMat), that is, names of subjects in the set, is requried.")
   
-  pos.PassG = which(MissingRate.Vec <= missing_cutoff & MAF.Vec <= max_maf & Var.Vec !=0)
+  pos.Step1.In.Step2 = match(SubjID.step1, subjID.step2, nomatch = 0)
+  
+  if(any(pos.Step1.In.Step2 == 0))
+    stop("All subjects in step 1 (fitting the null model) should be in step 2 (association testing).")
+  
+  if(impute.MAF.cohort == "step2"){  # calculate MAF (for imputation) based on all subjects with genotypes
+    GMat[GMat > 1.8] = 2  # change GMat close to 0/2 to 0/2
+    GMat[GMat < 0.2] = 0  # mainly for the future usage of Efficient Resampling (ER)
+    GMat[GMat == 9] = NA  # plink format use 9 as missing genotype
+    MAF.Vec = colMeans(GMat, na.rm = T) / 2   # MAF for all markers
+    GMat = GMat[pos.Step1.In.Step2,]
+    MAC.Vec = colSums(GMat, na.rm = T)
+  }
+  
+  if(impute.MAF.cohort == "step1"){  # calculate MAF (for imputation) based on subjects in null model fitting
+    GMat = GMat[pos.Step1.In.Step2,] 
+    GMat[GMat > 1.8] = 2  # change GMat close to 0/2 to 0/2
+    GMat[GMat < 0.2] = 0  # mainly for the future usage of Efficient Resampling (ER)
+    GMat[GMat == 9] = NA  # plink format use 9 as missing genotype
+    MAF.Vec = colMeans(GMat, na.rm = T) / 2   # MAF for all markers
+    MAC.Vec = MAF.Vec * 2 * ncol(GMat)
+  }
+  
+  # flip allele based on minor allele frequency
+  AlleleFlip.Vec = (MAF.Vec > 0.5)
+  MAF.Vec[AlleleFlip.Vec] = 1 - MAF.Vec[AlleleFlip.Vec]
+  MAC.Vec[AlleleFlip.Vec] = 2 * ncol(GMat) - MAC.Vec[AlleleFlip.Vec]
+  
+  # remove SNPs with large missing rate or MAF, or MAC == 0
+  MissingRate.Vec = colMeans(is.na(GMat))                    # missing rate for all markers
+  pos.PassG = which(MissingRate.Vec <= missing_cutoff & MAF.Vec <= max_maf & MAC.Vec != 0)
   
   if(length(pos.PassG) == 0){
-    msg = sprintf("In %s, ALL SNPs have been excluded. P value = 1",SetID)
+    msg = sprintf("In %s, ALL SNPs have been excluded. P value = 1", SetID)
     warning(msg, call.=FALSE)
     
     re = list(error = 1) 
     return(re)
   }
   
+  GMat = GMat[,pos.PassG,drop=F]
   MAF.Vec = MAF.Vec[pos.PassG]
   AlleleFlip.Vec = AlleleFlip.Vec[pos.PassG]
   MissingRate.Vec = MissingRate.Vec[pos.PassG]
-  
-  Geno.mtx = Geno.mtx[,pos.PassG,drop=F]
   
   # genotype imputation
   pos.imputeG = which(MissingRate.Vec > 0)
   
   if(length(pos.imputeG) > 0){
     for(i in pos.imputeG){
-      GVec = Geno.mtx[,i]
       MAF = MAF.Vec[i]
-      IDX_NA = which(is.na(GVec))
+      IDX_NA = which(is.na(GMat[,i]))
       n_NA = length(IDX_NA)
-      #
+      # different imputation method
       if(impute.method == "fixed") 
-        GVec[IDX_NA] = 2 * MAF
+        GMat[IDX_NA, i] = 2 * MAF
       if(impute.method == "bestguess") 
-        GVec[IDX_NA] = 0  # ifelse(MAF < 0.5, 0, 2). Since we only consider low-frequency variants and have flipped the allele
+        GMat[IDX_NA, i] = 0  # ifelse(MAF < 0.5, 0, 2). Since we only consider low-frequency variants and have flipped the allele
       if(impute.method == "random")
-        GVec[IDX_NA] = rbinom(n_NA, 2, maf)
+        GMat[IDX_NA, i] = rbinom(n_NA, 2, MAF)
     }
   }
   
   # get weights for rare variants analysis
   weights = Get_Weights(kernel, MAF.Vec, weights.beta)
   
-  return(list(Geno.mtx = Geno.mtx, 
+  return(list(GMat = GMat, 
               weights = weights,
               AlleleFlip.Vec = AlleleFlip.Vec,
               MAF.Vec = MAF.Vec, 
               error = 0))
 }
 
+####### ---------- Get Weights from MAF ---------- #######
+
+Get_Weights = function(kernel, MAF.Vec, weights.beta)
+{
+  if(kernel == "linear"){
+    weights = rep(1, length(MAF.Vec)) 
+  }
+  
+  if(kernel == "linear.weighted"){
+    weights = dbeta(MAF.Vec, weights.beta[1], weights.beta[2])
+  }
+  
+  return(weights)
+}

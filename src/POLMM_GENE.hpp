@@ -48,7 +48,7 @@ private:
   arma::mat m_muMat, m_iRMat, m_iSigmaX_XSigmaX;
   
   // input data
-  arma::Col<int> m_yVec; // should start from 1, not 0
+  arma::uvec m_yVec; // should start from 1, not 0
   arma::mat m_Cova;
   
   // almost input data
@@ -57,6 +57,10 @@ private:
   //
   Rcpp::List m_objP, m_LOCOList;
   string m_excludechr;
+  arma::vec m_RPsiRVec;
+    
+  // for Efficient Resampling (ER)
+  arma::umat m_SeqMat;
 
   ////////////////////// -------------------- functions ---------------------------------- //////////////////////
   
@@ -82,15 +86,21 @@ public:
   void setPOLMMGENEobj(int t_maxiterPCG,
                        double t_tolPCG,
                        arma::mat t_Cova,
-                       arma::Col<int> t_yVec,     // should be from 1 to J
+                       arma::uvec t_yVec,     // should be from 1 to J
                        double t_tau,
                        Rcpp::List t_SparseGRM,    // results of function getKinMatList()
                        Rcpp::List t_LOCOList,
-                       arma::vec t_eta);
+                       arma::vec t_eta,
+                       int t_nMaxNonZero);
   
   void closePOLMMGENEobj();
   
-  Rcpp::List getStatVarS(arma::mat t_GMat);
+  Rcpp::List getStatVarS(arma::mat t_GMat, 
+                         double t_NonZero_cutoff,
+                         double t_StdStat_cutoff);
+  
+  // get single marker p values from ER or SPA
+  double getPvalERinClass(arma::vec t_GVec);
 };
 
 }
