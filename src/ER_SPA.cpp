@@ -53,10 +53,6 @@ arma::vec getStatVec(arma::umat t_SeqMat,   // n x J^n matrix
     A.col(i) = t_GVec / t_iRMat.col(i);
   }
   
-  std::cout << "t_iRMat:\t" << t_iRMat << std::endl;
-  std::cout << "A:\t" << A << std::endl;
-  std::cout << "t_SeqMat:\t" << t_SeqMat << std::endl;
-  
   double a1 = arma::accu(A % t_muMat.cols(0, J-2));
   
   for(int i = 0; i < nER; i++){
@@ -67,8 +63,6 @@ arma::vec getStatVec(arma::umat t_SeqMat,   // n x J^n matrix
         a2 += A(j,idxL);
       }
     }
-    
-    std::cout << "a2:\t" << a2 << std::endl;
     
     StatVec(i) = a2 - a1;
   }
@@ -127,17 +121,13 @@ double getPvalER(arma::uvec t_yVec,     // n x 1 vector, from 1 to J
   
   double pvalER = 0;
   double absStatObs = std::abs(StatObs);
-  std::cout << "nER:\t" << nER << std::endl;
   for(int i = 0; i < nER; i++){
-    std::cout << "i:\t" << i << std::endl;
     double absStatTmp = std::abs(StatVec(i));
-    std::cout << "absStatObs:\t" << absStatObs << "\tabsStatTmp:\t" << absStatTmp << std::endl;
-    if(absStatObs > absStatTmp + eps){
+    if(absStatObs < absStatTmp - eps){
       pvalER += getProb(SeqMat.col(i), t_muMat);
-    }else if(absStatObs > absStatTmp - eps){
+    }else if(absStatObs < absStatTmp + eps){
       pvalER += 0.5 * getProb(SeqMat.col(i), t_muMat);
     }
-    std::cout << "pvalER:\t" << pvalER << std::endl;
   }
   
   // arma::uvec idxVec1 = arma::find(abs(StatVec) > std::abs(StatObs) + eps); // abs(double) return int;
