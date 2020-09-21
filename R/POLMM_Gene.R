@@ -100,7 +100,7 @@ POLMM.Gene = function(objNull,
   # check the setting of SKAT.control, if not specified, the default setting will be used
   SKAT.control = check.SKAT.control(SKAT.control)
   
-  GMat.list = Check_GMat(GMat, objNull,
+  GMat.list = Check_GMat(GMat, objNull, chrom,
                          kernel = SKAT.control$kernel, 
                          weights.beta = SKAT.control$weights.beta, 
                          impute.method = SKAT.control$impute.method,
@@ -339,13 +339,16 @@ check.SKAT.control = function(SKAT.control)
 
 ####### ---------- Check the GMat matrix, and do imputation ---------- #######
 
-Check_GMat = function(GMat, objNull, kernel, weights.beta, impute.method, impute.MAF.cohort, missing_cutoff, max_maf)
+Check_GMat = function(GMat, objNull, chrom, kernel, weights.beta, impute.method, impute.MAF.cohort, missing_cutoff, max_maf)
 {
   # Number of subjects and SNPs
   SetID = names(GMat);
   SNPsID = colnames(GMat)
   SubjID.step2 = rownames(GMat)
-  subjID.step1 = objNull$subjData
+  SubjID.step1 = objNull$subjData
+  
+  if(! chrom %in% names(objNull$LOCOList))
+    stop(paste("'chrom' should be from the below chromosomes:",names(objNull$LOCOList)))
   
   if(is.null(SetID))
     stop("names(GMat), that is, name of SNP set, is requried.")
