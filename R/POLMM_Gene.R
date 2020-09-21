@@ -359,7 +359,7 @@ Check_GMat = function(GMat, objNull, chrom, kernel, weights.beta, impute.method,
   if(is.null(SubjID.step2))
     stop("rownames(GMat), that is, names of subjects in the set, is requried.")
   
-  pos.Step1.In.Step2 = match(SubjID.step1, subjID.step2, nomatch = 0)
+  pos.Step1.In.Step2 = match(SubjID.step1, SubjID.step2, nomatch = 0)
   
   if(any(pos.Step1.In.Step2 == 0))
     stop("All subjects in step 1 (fitting the null model) should be in step 2 (association testing).")
