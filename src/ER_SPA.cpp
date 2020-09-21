@@ -53,6 +53,10 @@ arma::vec getStatVec(arma::umat t_SeqMat,   // n x J^n matrix
     A.col(i) = t_GVec / t_iRMat.col(i);
   }
   
+  std::cout << "t_iRMat:\t" << t_iRMat << std::endl;
+  std::cout << "A:\t" << A << std::endl;
+  std::cout << "t_SeqMat:\t" << t_SeqMat << std::endl;
+  
   double a1 = arma::accu(A % t_muMat.cols(0, J-2));
   
   for(int i = 0; i < nER; i++){
@@ -63,6 +67,9 @@ arma::vec getStatVec(arma::umat t_SeqMat,   // n x J^n matrix
         a2 += A(j,idxL);
       }
     }
+    
+    std::cout << "a2:\t" << a2 << std::endl;
+    
     StatVec(i) = a2 - a1;
   }
   
@@ -106,7 +113,7 @@ double getPvalER(arma::uvec t_yVec,     // n x 1 vector, from 1 to J
   int n = t_muMat.n_rows;
   int J = t_muMat.n_cols;
   
-  arma::uvec yVec(n);  // from 0 to J-1
+  arma::uvec yVec(n);  // yVec: from 0 to J-1; t_yVec: from 1 to J
   for(int i = 0; i < n; i++){
     yVec(i) = t_yVec(i) - 1;
   }
