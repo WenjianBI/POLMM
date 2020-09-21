@@ -345,7 +345,7 @@ Check_GMat = function(GMat, objNull, chrom, kernel, weights.beta, impute.method,
   SetID = names(GMat);
   SNPsID = colnames(GMat)
   SubjID.step2 = rownames(GMat)
-  SubjID.step1 = objNull$subjData
+  SubjID.step1 = objNull$subjIDs
   
   if(! chrom %in% names(objNull$LOCOList))
     stop(paste("'chrom' should be from the below chromosomes:",names(objNull$LOCOList)))
