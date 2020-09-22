@@ -197,12 +197,12 @@ POLMM.Gene = function(objNull,
     Ratio0 = OutList$Ratio0Vec[1,1]
     K1roots = c(0,0)
     posG1 = which(GMat.BT[,1] != 0)
-    adjG = OutList$adjGMat[posG1,1]
-    # calculate p value of Burden based on 
+    adjGVec = OutList$adjGMat[posG1,1]
+    # calculate p value of Burden test from saddlepoint approximation
     res.spa = fastSaddle_Prob(StatVec[i], VarSVec[i], 
                               VarWVec[idx.SPA], Ratio0Vec[idx.SPA], 
                               K1roots,
-                              adjGVec[posG1], muMat1[posG1,], iRMat[posG1,])
+                              adjGVec, muMat1[posG1,], iRMat[posG1,])
     pval.BT = res.spa$pval
     print(paste("pval.BT:",pval.BT))
   }
