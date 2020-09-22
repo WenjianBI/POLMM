@@ -103,6 +103,7 @@ POLMM.Gene = function(objNull,
   # check the setting of SKAT.control, if not specified, the default setting will be used
   SKAT.control = check.SKAT.control(SKAT.control)
   
+  
   GMat.list = Check_GMat(GMat, objNull, chrom,
                          kernel = SKAT.control$kernel, 
                          weights.beta = SKAT.control$weights.beta, 
@@ -184,7 +185,27 @@ POLMM.Gene = function(objNull,
   
   wadjVarSMat = t(VarSMat * wr0) * wr0
   
-  ## might need another step to introduce another ratio to adjust for variance matrix based on Burden Test
+  ## use another ratio to adjust for variance matrix based on Burden Test
+  GMat.BT = matrix(colSums(t(GMat) * weights), ncol=1)
+  OutList = getStatVarS(GMat.BT, 0, StdStat_cutoff)
+  
+  # Burden test p value is more significant than the pre-given cutoff
+  if(ncol(OutList$adjGMat) == 1){
+    Stat = OutList$StatVec[1,1]
+    VarS = OutList$VarSMat[1,1]
+    VarW = OutList$VarWMat[1,1]
+    Ratio0 = OutList$Ratio0Vec[1,1]
+    K1roots = c(0,0)
+    posG1 = which(GMat.BT[,1] != 0)
+    adjG = OutList$adjGMat[posG1,1]
+    # calculate p value of Burden based on 
+    res.spa = fastSaddle_Prob(StatVec[i], VarSVec[i], 
+                              VarWVec[idx.SPA], Ratio0Vec[idx.SPA], 
+                              K1roots,
+                              adjGVec[posG1], muMat1[posG1,], iRMat[posG1,])
+    pval.BT = res.spa$pval
+    print(paste("pval.BT:",pval.BT))
+  }
   
   # p.value_burden <- Saddle_Prob(q.sum, mu = mu, g = g.sum,
   #                               Cutoff = 2, alpha = 2.5 * 10^-6)$p.value
