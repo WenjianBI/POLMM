@@ -193,7 +193,7 @@ POLMM.Gene = function(objNull,
   if(ncol(OutList$adjGMat) == 1){
     Stat = OutList$StatVec[1,1]
     VarS = OutList$VarSMat[1,1]
-    VarW = OutList$VarWMat[1,1]
+    VarW = OutList$VarWVec[1,1]
     Ratio0 = OutList$Ratio0Vec[1,1]
     K1roots = c(0,0)
     posG1 = which(GMat.BT[,1] != 0)
