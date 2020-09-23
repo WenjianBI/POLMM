@@ -173,6 +173,7 @@ POLMM.Gene = function(objNull,
   #########
   
   wStatVec = StatVec * weights
+  print(paste("wStatVec:",wStatVec))
   
   if(any(is.infinite(adjVarSVec))) 
     stop("any(is.infinite(adjVarSVec))") # I want to know when this will happen
@@ -191,7 +192,9 @@ POLMM.Gene = function(objNull,
   
   # Burden test p value is more significant than the pre-given cutoff
   if(ncol(OutList$adjGMat) == 1){
+    # extract useful information from OutList
     Stat = OutList$StatVec[1,1]
+    print(paste("Stat:",Stat))
     VarS = OutList$VarSMat[1,1]
     VarW = OutList$VarWVec[1,1]
     Ratio0 = OutList$Ratio0Vec[1,1]
@@ -204,7 +207,7 @@ POLMM.Gene = function(objNull,
                               K1roots,
                               adjGVec, muMat1[posG1,], iRMat[posG1,])
     pval.BT = res.spa$pval
-    print(paste("pval.BT:",pval.BT))
+    VarQ.BT = Stat / qchisq(pval.BT, df = 1, lower.tail = F)
   }
   
   # p.value_burden <- Saddle_Prob(q.sum, mu = mu, g = g.sum,
