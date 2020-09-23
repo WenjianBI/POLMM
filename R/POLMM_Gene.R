@@ -173,7 +173,6 @@ POLMM.Gene = function(objNull,
   #########
   
   wStatVec = StatVec * weights
-  print(paste("wStatVec:",wStatVec))
   
   if(any(is.infinite(adjVarSVec))) 
     stop("any(is.infinite(adjVarSVec))") # I want to know when this will happen
@@ -192,9 +191,10 @@ POLMM.Gene = function(objNull,
   
   # Burden test p value is more significant than the pre-given cutoff
   if(ncol(OutList$adjGMat) == 1){
+    VarQ.BT = sum(diag(wadjVarSMat))
+    print(paste("VarQ.BT:",VarQ.BT))
     # extract useful information from OutList
     Stat = OutList$StatVec[1,1]
-    print(paste("Stat:",Stat))
     VarS = OutList$VarSMat[1,1]
     VarW = OutList$VarWVec[1,1]
     Ratio0 = OutList$Ratio0Vec[1,1]
@@ -207,37 +207,19 @@ POLMM.Gene = function(objNull,
                               K1roots,
                               adjGVec, muMat1[posG1,], iRMat[posG1,])
     pval.BT = res.spa$pval
-    VarQ.BT = Stat / qchisq(pval.BT, df = 1, lower.tail = F)
+    adjVarQ.BT = Stat^2 / qchisq(pval.BT, df = 1, lower.tail = F)
+    print(paste("adjVarQ.BT:",adjVarQ.BT))
+    
+    if(adjVarQ.BT == 0){
+      ratio = 1
+    }else{
+      ratio = VarQ.BT / adjVarQ.BT
+      ratio = min(1, ratio)
+    }
+      
+    wadjVarSMat = wadjVarSMat / ratio
+    
   }
-  
-  # p.value_burden <- Saddle_Prob(q.sum, mu = mu, g = g.sum,
-  #                               Cutoff = 2, alpha = 2.5 * 10^-6)$p.value
-  # v1 = rep(1, dim(G2_adj_n)[1])
-  # VarQ = t(v1) %*% G2_adj_n %*% v1
-  # p.m <- dim(G)[2]
-  # Q_b = p.m^2 * rowMeans(zscore.all_1)^2
-  # VarQ_2 = Q_b/qchisq(p.value_burden, df = 1, ncp = 0, lower.tail = FALSE,
-  #                     log.p = FALSE)
-  #
-  # if (VarQ_2 == 0) {
-  #   r = 1
-  # }     else {
-  #   r = VarQ/VarQ_2
-  # }
-  # r = min(r, 1)
-  #
-  # if (dim(G2_adj_n)[2]==1){
-  #   Phi_temp=as.matrix(G2_adj_n *1/r)
-  # } else {
-  #   Phi_temp=as.matrix(G2_adj_n %*% diag(rep(1/r, dim(G2_adj_n)[2])))
-  # }
-  # 
-  # q = ncol(mVarSMat)
-  # if(q == 1){
-  #   Phi_temp = as.matrix(mVarSMat * 1/r)
-  # }else{
-  #   Phi_temp = as.matrix(Phi_temp %*% diag(rep(1/r, q)))
-  # }
   
   r.all = SKAT.control$r.corr
   r.all = ifelse(r.all >= 0.999, 0.999, r.all)
@@ -354,7 +336,7 @@ check.SKAT.control = function(SKAT.control)
       SKAT.control$r.corr = 1;
     
     if(method == "SKAT-O")
-      SKAT.control$r.corr = c(0, 0.1^2, 0.2^2, 0.3^2, 0.5^2, 0.5, 1);
+      SKAT.control$r.corr = c(0, 0.1^2, 0.2^2, 0.3^2, 0.5^2, 0.5, 1);  # r.corr = 0 is SKAT, r.corr = 1 is Burden Test
   }
   
   if(any(SKAT.control$r.corr < 0 | SKAT.control$r.corr > 1))
