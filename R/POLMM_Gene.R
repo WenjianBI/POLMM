@@ -416,6 +416,7 @@ POLMM.Gene.Main = function(GMat.list,          # output of Check_GMat()
   idxERVec = as.vector(OutList$idxERVec)
   idxSPAVec = as.vector(OutList$idxSPAVec)
   muMat = OutList$muMat
+  J = ncol(muMat)
   muMat1 = muMat[,-1*J]
   iRMat = OutList$iRMat
   VarWVec = as.vector(OutList$VarWVec)
