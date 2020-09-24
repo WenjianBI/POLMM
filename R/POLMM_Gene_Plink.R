@@ -172,7 +172,8 @@ POLMM.Gene.plink = function(objNull,
     
     out_One_Set = POLMM.Gene.Main(GMat.list,          # output of Check_GMat()
                                   NonZero_cutoff,
-                                  StdStat_cutoff)
+                                  StdStat_cutoff,
+                                  SKAT.control)
     
     out_Multi_Set = rbind(out_Multi_Set, out_One_Set)
     

@@ -140,7 +140,8 @@ POLMM.Gene = function(objNull,
   
   out_One_Set = POLMM.Gene.Main(GMat.list,          # output of Check_GMat()
                                 NonZero_cutoff,
-                                StdStat_cutoff)
+                                StdStat_cutoff,
+                                SKAT.control)
   
   # out_One_Set = c(SetID, 
   #                 length(SNPsID),
@@ -379,7 +380,8 @@ Get_Weights = function(kernel, MAF.Vec, weights.beta)
 
 POLMM.Gene.Main = function(GMat.list,          # output of Check_GMat()
                            NonZero_cutoff,
-                           StdStat_cutoff)
+                           StdStat_cutoff,
+                           SKAT.control)
 {
   if(GMat.list$error){
     # out_One_Set = c(SetID, 
