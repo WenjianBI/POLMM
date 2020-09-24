@@ -90,9 +90,11 @@
 #' 
 #' @export
 #' @import SKAT
+#' @import Matrix
 
 POLMM.Gene = function(objNull,
                       GMat,                    # n x q matrix, where n is number of subjects and m is number of markers
+                      SetName,
                       chrom,
                       SparseGRM,
                       SKAT.control = NULL)
@@ -103,8 +105,12 @@ POLMM.Gene = function(objNull,
   # check the setting of SKAT.control, if not specified, the default setting will be used
   SKAT.control = check.SKAT.control(SKAT.control)
   
+  if(! chrom %in% names(objNull$LOCOList))
+    stop(paste("'chrom' should be from the below chromosomes:", names(objNull$LOCOList)))
   
-  GMat.list = Check_GMat(GMat, objNull, chrom,
+  SubjID.step1 = objNull$subjIDs;
+  
+  GMat.list = Check_GMat(GMat, SetName, SubjID.step1,
                          kernel = SKAT.control$kernel, 
                          weights.beta = SKAT.control$weights.beta, 
                          impute.method = SKAT.control$impute.method,
@@ -112,19 +118,8 @@ POLMM.Gene = function(objNull,
                          missing_cutoff = SKAT.control$missing_cutoff, 
                          max_maf = SKAT.control$max_maf)
   
-  if(GMat.list$error){
-    outList = list(p.value = NA, param = NA, p.value.resampling = NA)
-    return(outList)
-  }
-  
-  # extract information from GMat.list
-  GMat = GMat.list$GMat
-  weights = GMat.list$weights
-  AlleleFlip.Vec = GMat.list$AlleleFlip.Vec
-  MAF.Vec = GMat.list$MAF.Vec  # this might be slightly different from "true" MAF due to the genotype imputation, but should be OK since we have limited the missing_rate
-  
   # update SparseGRM 
-  SparseGRM = updateSparseGRM(SparseGRM, objNull$subjIDs)
+  SparseGRM = updateSparseGRM(SparseGRM, SubjID.step1)
   J = max(objNull$yVec)
   NonZero_cutoff = floor(log(50000, J))  # for efficient resampling (ER)
   StdStat_cutoff = SKAT.control$SPAcutoff
@@ -143,97 +138,24 @@ POLMM.Gene = function(objNull,
   setPOLMMGENEchr(objNull$LOCOList, 
                   chrom)
   
-  ##
-  OutList = getStatVarS(GMat, NonZero_cutoff, StdStat_cutoff)
-
-  # output basic information including Stat, stdStat, and VarSMat
-  StatVec = as.vector(OutList$StatVec)  # as.vector(): transform matrix to vector
-  StdStatVec = as.vector(OutList$StdStatVec)
-  VarSMat = OutList$VarSMat
-  VarSVec = diag(VarSMat)
+  out_One_Set = POLMM.Gene.Main(GMat.list,          # output of Check_GMat()
+                                NonZero_cutoff,
+                                StdStat_cutoff)
   
-  # adjust the results based on SPA or ER
-  idxERVec = as.vector(OutList$idxERVec)
-  idxSPAVec = as.vector(OutList$idxSPAVec)
-  muMat = OutList$muMat
-  muMat1 = muMat[,-1*J]
-  iRMat = OutList$iRMat
-  VarWVec = as.vector(OutList$VarWVec)
-  Ratio0Vec = as.vector(OutList$Ratio0Vec)
-  adjGMat = OutList$adjGMat
-
-  out_SPA_ER = adj_SPA_ER(GMat, StatVec, VarSVec, StdStatVec,
-                          idxERVec, idxSPAVec,
-                          muMat1, iRMat, VarWVec, Ratio0Vec, adjGMat) # first check the non-robust version, no adjustment
+  # out_One_Set = c(SetID, 
+  #                 length(SNPsID),
+  #                 Pvalue,
+  #                 error.code,
+  #                 paste(SNPsID, collapse = ","),
+  #                 paste(MAF.Vec, collapse = ","),
+  #                 paste(AlleleFlip.Vec, collapse = ","),
+  #                 paste(betaVec, collapse = ","),
+  #                 paste(adjPVec, collapse = ","))
   
-  adjPVec = out_SPA_ER$adjPVec
-  PVec = out_SPA_ER$PVec
-  adjVarSVec = out_SPA_ER$adjVarSVec
+  names(out_One_Set) = c("SetID", "nSNP", "P.SKAT-O", "P.SKAT", "P.Burden",
+                         "error.code", "SNP.Info", "SNP.MAF","SNP.AlleleFlip","SNP.beta","SNP.pvalue")
   
-  #########
-  
-  wStatVec = StatVec * weights
-  
-  if(any(is.infinite(adjVarSVec))) 
-    stop("any(is.infinite(adjVarSVec))") # I want to know when this will happen
-  
-  adjVarSVec = ifelse(is.infinite(adjVarSVec), 0, adjVarSVec)
-  StatVec = ifelse(is.infinite(adjVarSVec), 0, StatVec)
-  
-  r0 = adjVarSVec / VarSVec  # adjVarSVec might be 0
-  wr0 = sqrt(r0) * weights
-  
-  wadjVarSMat = t(VarSMat * wr0) * wr0
-  
-  ## use another ratio to adjust for variance matrix based on Burden Test
-  GMat.BT = matrix(colSums(t(GMat) * weights), ncol=1)
-  OutList = getStatVarS(GMat.BT, 0, StdStat_cutoff)
-  
-  # Burden test p value is more significant than the pre-given cutoff
-  if(ncol(OutList$adjGMat) == 1){
-    VarQ.BT = sum(diag(wadjVarSMat))
-    print(paste("VarQ.BT:",VarQ.BT))
-    # extract useful information from OutList
-    Stat = OutList$StatVec[1,1]
-    VarS = OutList$VarSMat[1,1]
-    VarW = OutList$VarWVec[1,1]
-    Ratio0 = OutList$Ratio0Vec[1,1]
-    K1roots = c(0,0)
-    posG1 = which(GMat.BT[,1] != 0)
-    adjGVec = OutList$adjGMat[posG1,1]
-    # calculate p value of Burden test from saddlepoint approximation
-    res.spa = fastSaddle_Prob(Stat, VarS, 
-                              VarW, Ratio0, 
-                              K1roots,
-                              adjGVec, muMat1[posG1,], iRMat[posG1,])
-    pval.BT = res.spa$pval
-    adjVarQ.BT = Stat^2 / qchisq(pval.BT, df = 1, lower.tail = F)
-    print(paste("adjVarQ.BT:",adjVarQ.BT))
-    
-    if(adjVarQ.BT == 0){
-      ratio = 1
-    }else{
-      ratio = VarQ.BT / adjVarQ.BT
-      ratio = min(1, ratio)
-    }
-      
-    wadjVarSMat = wadjVarSMat / ratio
-    
-  }
-  
-  r.all = SKAT.control$r.corr
-  r.all = ifelse(r.all >= 0.999, 0.999, r.all)
-  
-  outList = try(SKAT:::Met_SKAT_Get_Pvalue(Score = wStatVec, Phi = wadjVarSMat,
-                                           r.corr = r.all, method = "optimal.adj", Score.Resampling = NULL),
-                silent = TRUE)
-  
-  outList = list(outList = outList,
-                 PVec = PVec,
-                 adjPVec = adjPVec)
-  
-  # OutMat = as.data.frame(OutMat, stringsAsFactors=F)
-  return(outList)
+  return(out_One_Set)
 }
 
 adj_SPA_ER = function(GMat, StatVec, VarSVec, StdStatVec,
@@ -348,25 +270,21 @@ check.SKAT.control = function(SKAT.control)
 
 ####### ---------- Check the GMat matrix, and do imputation ---------- #######
 
-Check_GMat = function(GMat, objNull, chrom, kernel, weights.beta, impute.method, impute.MAF.cohort, missing_cutoff, max_maf)
+Check_GMat = function(GMat, SetName = NULL, SubjID.step1, kernel, weights.beta, impute.method, impute.MAF.cohort, missing_cutoff, max_maf)
 {
   # Number of subjects and SNPs
-  SetID = names(GMat);
+  SetID = SetName;
   SNPsID = colnames(GMat)
   SubjID.step2 = rownames(GMat)
-  SubjID.step1 = objNull$subjIDs
-  
-  if(! chrom %in% names(objNull$LOCOList))
-    stop(paste("'chrom' should be from the below chromosomes:",names(objNull$LOCOList)))
   
   if(is.null(SetID))
-    stop("names(GMat), that is, name of SNP set, is requried.")
+    stop("names(GMat), that is, name of the SNP set, is requried.")
   
   if(is.null(SNPsID))
-    stop("colnames(GMat), that is, names of SNPs in the set, is requried.")
+    stop("colnames(GMat), that is, names of SNPs in the SNP set, is requried.")
   
   if(is.null(SubjID.step2))
-    stop("rownames(GMat), that is, names of subjects in the set, is requried.")
+    stop("rownames(GMat), that is, names of subjects in the SNP set, is requried.")
   
   pos.Step1.In.Step2 = match(SubjID.step1, SubjID.step2, nomatch = 0)
   
@@ -388,13 +306,13 @@ Check_GMat = function(GMat, objNull, chrom, kernel, weights.beta, impute.method,
     GMat[GMat < 0.2] = 0  # mainly for the future usage of Efficient Resampling (ER)
     GMat[GMat == 9] = NA  # plink format use 9 as missing genotype
     MAF.Vec = colMeans(GMat, na.rm = T) / 2   # MAF for all markers
-    MAC.Vec = MAF.Vec * 2 * ncol(GMat)
+    MAC.Vec = MAF.Vec * 2 * nrow(GMat)
   }
   
   # flip allele based on minor allele frequency
   AlleleFlip.Vec = (MAF.Vec > 0.5)
   MAF.Vec[AlleleFlip.Vec] = 1 - MAF.Vec[AlleleFlip.Vec]
-  MAC.Vec[AlleleFlip.Vec] = 2 * ncol(GMat) - MAC.Vec[AlleleFlip.Vec]
+  MAC.Vec[AlleleFlip.Vec] = 2 * nrow(GMat) - MAC.Vec[AlleleFlip.Vec]
   
   # remove SNPs with large missing rate or MAF, or MAC == 0
   MissingRate.Vec = colMeans(is.na(GMat))                    # missing rate for all markers
@@ -404,7 +322,7 @@ Check_GMat = function(GMat, objNull, chrom, kernel, weights.beta, impute.method,
     msg = sprintf("In %s, ALL SNPs have been excluded. P value = 1", SetID)
     warning(msg, call.=FALSE)
     
-    re = list(error = 1) 
+    re = list(error = 1, error_code = 1, SetID = SetID) 
     return(re)
   }
   
@@ -434,11 +352,13 @@ Check_GMat = function(GMat, objNull, chrom, kernel, weights.beta, impute.method,
   # get weights for rare variants analysis
   weights = Get_Weights(kernel, MAF.Vec, weights.beta)
   
-  return(list(GMat = GMat, 
+  return(list(error = 0, 
+              SetID = SetID,
+              SNPsID = SNPsID,
+              GMat = GMat, 
               weights = weights,
               AlleleFlip.Vec = AlleleFlip.Vec,
-              MAF.Vec = MAF.Vec, 
-              error = 0))
+              MAF.Vec = MAF.Vec))
 }
 
 ####### ---------- Get Weights from MAF ---------- #######
@@ -455,3 +375,145 @@ Get_Weights = function(kernel, MAF.Vec, weights.beta)
   
   return(weights)
 }
+
+
+POLMM.Gene.Main = function(GMat.list,          # output of Check_GMat()
+                           NonZero_cutoff,
+                           StdStat_cutoff)
+{
+  if(GMat.list$error){
+    # out_One_Set = c(SetID, 
+    #                 length(SNPsID),
+    #                 Pvalue,
+    #                 error.code,
+    #                 paste(SNPsID, collapse = ","),
+    #                 paste(MAF.Vec, collapse = ","),
+    #                 paste(AlleleFlip.Vec, collapse = ","),
+    #                 paste(betaVec, collapse = ","),
+    #                 paste(adjPVec, collapse = ","))
+    out_One_Set = c(SetID, 0, rep(NA,3), 1, rep(NA,5))
+    return(out_One_Set)
+  }
+  
+  # extract information from GMat.list
+  SetID = GMat.list$SetID
+  SNPsID = GMat.list$SNPsID
+  GMat = GMat.list$GMat
+  weights = GMat.list$weights
+  AlleleFlip.Vec = GMat.list$AlleleFlip.Vec
+  MAF.Vec = GMat.list$MAF.Vec  # this might be slightly different from "true" MAF due to the genotype imputation, but should be OK since we have limited the missing_rate
+  
+  # get Stat and Variance for this region
+  OutList = getStatVarS(GMat, NonZero_cutoff, StdStat_cutoff)
+  
+  # output basic information including Stat, stdStat, and VarSMat
+  StatVec = as.vector(OutList$StatVec)  # as.vector(): transform matrix to vector
+  StdStatVec = as.vector(OutList$StdStatVec)
+  VarSMat = OutList$VarSMat
+  VarSVec = diag(VarSMat)
+  
+  # adjust the results based on SPA or ER
+  idxERVec = as.vector(OutList$idxERVec)
+  idxSPAVec = as.vector(OutList$idxSPAVec)
+  muMat = OutList$muMat
+  muMat1 = muMat[,-1*J]
+  iRMat = OutList$iRMat
+  VarWVec = as.vector(OutList$VarWVec)
+  Ratio0Vec = as.vector(OutList$Ratio0Vec)
+  adjGMat = OutList$adjGMat
+  
+  out_SPA_ER = adj_SPA_ER(GMat, StatVec, VarSVec, StdStatVec,
+                          idxERVec, idxSPAVec,
+                          muMat1, iRMat, VarWVec, Ratio0Vec, adjGMat) # first check the non-robust version, no adjustment
+  
+  adjPVec = out_SPA_ER$adjPVec
+  PVec = out_SPA_ER$PVec
+  adjVarSVec = out_SPA_ER$adjVarSVec
+  
+  #########
+  
+  wStatVec = StatVec * weights
+  
+  if(any(is.infinite(adjVarSVec))) 
+    stop("any(is.infinite(adjVarSVec))") # I want to know when this will happen
+  
+  adjVarSVec = ifelse(is.infinite(adjVarSVec), 0, adjVarSVec)
+  StatVec = ifelse(is.infinite(adjVarSVec), 0, StatVec)
+  
+  r0 = adjVarSVec / VarSVec  # adjVarSVec might be 0
+  wr0 = sqrt(r0) * weights
+  
+  wadjVarSMat = t(VarSMat * wr0) * wr0
+  
+  ## use another ratio to adjust for variance matrix based on Burden Test
+  GMat.BT = matrix(colSums(t(GMat) * weights), ncol=1)
+  OutList = getStatVarS(GMat.BT, 0, StdStat_cutoff)
+  
+  # Burden test p value is more significant than the pre-given cutoff
+  if(ncol(OutList$adjGMat) == 1){
+    VarQ.BT = sum(diag(wadjVarSMat))
+    # extract useful information from OutList
+    Stat = OutList$StatVec[1,1]
+    VarS = OutList$VarSMat[1,1]
+    VarW = OutList$VarWVec[1,1]
+    Ratio0 = OutList$Ratio0Vec[1,1]
+    K1roots = c(0,0)
+    posG1 = which(GMat.BT[,1] != 0)
+    adjGVec = OutList$adjGMat[posG1,1]
+    # calculate p value of Burden test from saddlepoint approximation
+    res.spa = fastSaddle_Prob(Stat, VarS, 
+                              VarW, Ratio0, 
+                              K1roots,
+                              adjGVec, muMat1[posG1,], iRMat[posG1,])
+    pval.BT = res.spa$pval
+    adjVarQ.BT = Stat^2 / qchisq(pval.BT, df = 1, lower.tail = F)
+    
+    if(adjVarQ.BT == 0){
+      ratio = 1
+    }else{
+      ratio = VarQ.BT / adjVarQ.BT
+      ratio = min(1, ratio)
+    }
+    
+    wadjVarSMat = wadjVarSMat / ratio
+    
+  }
+  
+  r.all = SKAT.control$r.corr
+  r.all = ifelse(r.all >= 0.999, 0.999, r.all)
+  
+  out_SKAT_List = try(SKAT:::Met_SKAT_Get_Pvalue(Score = wStatVec, Phi = wadjVarSMat,
+                                                 r.corr = r.all, method = "optimal.adj", Score.Resampling = NULL),
+                      silent = TRUE)
+  
+  betaVec = StatVec / adjVarSVec; 
+  
+  if(class(out_SKAT_List) == "try-error"){
+    Pvalue = c(NA, NA, NA)
+    error.code = 2
+  }else if(!any(c(0,1) %in% out_SKAT_List$param$rho)){
+    Pvalue = c(NA, NA, NA)
+    error.code = 3
+  }else{
+    pos0 = which(out_SKAT_List$param$rho == 0)
+    pos1 = which(out_SKAT_List$param$rho == 1)
+    Pvalue = c(out_SKAT_List$p.value,                  # SKAT-O
+               out_SKAT_List$param$p.val.each[pos0],   # SKAT
+               out_SKAT_List$param$p.val.each[pos1])   # Burden Test
+    error.code = 0
+  }
+  
+  out_One_Set = c(SetID, 
+                  length(SNPsID),
+                  Pvalue,
+                  error.code,
+                  paste(SNPsID, collapse = ","),
+                  paste(MAF.Vec, collapse = ","),
+                  paste(AlleleFlip.Vec, collapse = ","),
+                  paste(betaVec, collapse = ","),
+                  paste(adjPVec, collapse = ","))
+  
+  
+  return(out_One_Set)
+}
+

@@ -3,7 +3,7 @@
 #' Test for association between genotype and an ordinal categorical variable via Proportional Odds Logistic Mixed Model (POLMM)
 #' 
 #' @param objNull output object of the POLMM_Null_Model() function 
-#' @param plink.file character, represents the prefix of PLINK input file.
+#' @param PlinkFile character, represents the prefix of PLINK input file.
 #' @param output.file character, represents the prefix of output file.
 #' @param memory.chunk a numeric value (default: 4, unit=Gb) to specify how much memory is used to store genotype matrix from plink files.
 #' @param chrVec a character or a character vector to specify chromosome(s) of the markers in Geno.mtx. Must be specified unless LOCO = F.
@@ -65,7 +65,7 @@
 #' @import seqminer
 
 POLMM.plink = function(objNull,
-                       plink.file,            # plink prefix
+                       PlinkFile,            # plink prefix
                        output.file,
                        chrVec.plink,
                        memory.chunk = 4,
@@ -75,19 +75,15 @@ POLMM.plink = function(objNull,
                        impute.method = "fixed",
                        G.model = "Add")
 {
-  ## check plink files input
-  bim.file = paste0(plink.file, ".bim")
-  bed.file = paste0(plink.file, ".bed")
-  fam.file = paste0(plink.file, ".fam")
+  # check plink files input
+  out.plink = check.PlinkFile(PlinkFile)
+  fam.data = out.plink$fam.data
+  bim.data = out.plink$bim.data
   
-  if(!file.exists(bim.file)) stop("Could not find paste0(plink.file,'.bim')")
-  if(!file.exists(bed.file)) stop("Could not find paste0(plink.file,'.bed')")
-  if(!file.exists(fam.file)) stop("Could not find paste0(plink.file,'.fam')")
   if(file.exists(output.file)) 
     stop("'output.file' existed. Please give a different 'output.file' or remove the existing 'output.file'.")
   
-  fam.data = read.table(fam.file, stringsAsFactors = F)
-  bim.data = read.table(bim.file, stringsAsFactors = F)
+  
   
   subjIDs_Null = objNull$subjIDs
   gIDs = fam.data$V2
@@ -124,7 +120,7 @@ POLMM.plink = function(objNull,
     print(paste0("Analyzing chunk ",i,"/",n.chunk,"."))
     markerIndex = pos[markerIndex]
     
-    Geno.mtx = seqminer::readPlinkToMatrixByIndex(plink.file, subjIndex_Null, markerIndex)
+    Geno.mtx = seqminer::readPlinkToMatrixByIndex(PlinkFile, subjIndex_Null, markerIndex)
     colnames(Geno.mtx) = bim.data$V2[markerIndex]
     
     if(names(objNull$LOCOList)[1] == "LOCO=F"){
@@ -151,4 +147,21 @@ POLMM.plink = function(objNull,
   
   # return(output)  # output is stored in outFile
   
+}
+
+check.PlinkFile = function(PlinkFile)
+{
+  bim.file = paste0(PlinkFile, ".bim")
+  bed.file = paste0(PlinkFile, ".bed")
+  fam.file = paste0(PlinkFile, ".fam")
+  
+  if(!file.exists(bim.file)) stop("Could not find paste0(PlinkFile,'.bim')")
+  if(!file.exists(bed.file)) stop("Could not find paste0(PlinkFile,'.bed')")
+  if(!file.exists(fam.file)) stop("Could not find paste0(PlinkFile,'.fam')")
+  
+  fam.data = read.table(fam.file, stringsAsFactors = F)
+  bim.data = read.table(bim.file, stringsAsFactors = F)
+  
+  out.plink = list(fam.data = fam.data,
+                   bim.data = bim.data)
 }
