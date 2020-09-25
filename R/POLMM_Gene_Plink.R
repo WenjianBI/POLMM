@@ -157,7 +157,8 @@ POLMM.Gene.plink = function(objNull,
     markerIndex = match(SNPSet, bim.data$V2, nomatch = 0)
     markerIndex = markerIndex[markerIndex!=0]
     
-    GMat = seqminer::readPlinkToMatrixByIndex(PlinkFile, subjIndex_Null, markerIndex)
+    invisible(capture.output(GMat <- seqminer::readPlinkToMatrixByIndex(PlinkFile, subjIndex_Null, markerIndex), 
+                             type="message"))
     colnames(GMat) = bim.data$V2[markerIndex]
     rownames(GMat) = fam.data$V2[subjIndex_Null]
     SetName = names.SNPSet[i]
