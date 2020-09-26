@@ -180,6 +180,7 @@ POLMM.Gene.plink = function(objNull,
     
   }
 
+  closePOLMMGENEobj()
   colnames(out_Multi_Set) = c("SetID", "nSNP", "P.SKAT-O", "P.SKAT", "P.Burden",
                               "error.code", "SNP.Info", "SNP.MAF","SNP.AlleleFlip","SNP.beta","SNP.pvalue")
   

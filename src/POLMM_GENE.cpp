@@ -110,15 +110,15 @@ Rcpp::List POLMMGENEClass::getStatVarS(arma::mat t_GMat,
 }
 
 
-void POLMMGENEClass::setPOLMMGENEobj(int t_maxiterPCG,
-                                     double t_tolPCG,
-                                     arma::mat t_Cova,
-                                     arma::uvec t_yVec,         // should be from 1 to J
-                                     double t_tau,
-                                     Rcpp::List t_SparseGRM,    // results of function getKinMatList()
-                                     Rcpp::List t_LOCOList,
-                                     arma::vec t_eta,
-                                     int t_nMaxNonZero)
+POLMMGENEClass::POLMMGENEClass(int t_maxiterPCG,
+                               double t_tolPCG,
+                               arma::mat t_Cova,
+                               arma::uvec t_yVec,         // should be from 1 to J
+                               double t_tau,
+                               Rcpp::List t_SparseGRM,    // results of function getKinMatList()
+                               Rcpp::List t_LOCOList,
+                               arma::vec t_eta,
+                               int t_nMaxNonZero)
 {
   m_flagSparseGRM = true;
   m_maxiterPCG = t_maxiterPCG; 
@@ -180,10 +180,6 @@ void POLMMGENEClass::setPOLMMGENEchr(Rcpp::List t_LOCOList, string t_excludechr)
   
 }
 
-void POLMMGENEClass::closePOLMMGENEobj()
-{
-  // add something later
-}
 
 // sum up each (J-1) elements: n(J-1) x 1 -> n x 1
 arma::vec POLMMGENEClass::ZMat(arma::vec t_xVec)

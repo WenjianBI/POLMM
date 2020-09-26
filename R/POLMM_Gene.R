@@ -49,7 +49,7 @@
 #' \item{showInfo: Whether to show more detailed information for trouble shooting [default=TRUE].}
 #' \item{onlyCheckTime: Not fit the null model, only check the computation time of reading Plink files and running 30 KinbVec() functions [default=FALSE].}
 #' }
-#' #' @examples 
+#' @examples 
 #' ## We use a Plink file with 10,000 markers and 1,000 subjects to constract GRM for demonstration. 
 #' ## For real data analysis, we recommend >= 100,000 common markers (MAF > 0.05 or 0.01).
 #' ## Selection of the common markers is similar as in Principle Components Analysis (PCA).
@@ -78,8 +78,9 @@
 #' colnames(GMat) = paste0("rs",1:10)
 #' chrVec = chrom = "1"  # equivalant to chrVec = rep("1", ncol(GMat))
 #' outPOLMM = POLMM(objNull, GMat, chrVec)
+#' SetName = "Set1"
 #' 
-#' outList = POLMM.Gene(objNull, GMat, chrom, SparseGRM)
+#' outList = POLMM.Gene(objNull, GMat, SetName, chrom, SparseGRM)
 #' 
 #' outPOLMM
 #' outList
@@ -106,7 +107,8 @@ POLMM.Gene = function(objNull,
   SKAT.control = check.SKAT.control(SKAT.control)
   
   if(! chrom %in% names(objNull$LOCOList))
-    stop(paste("'chrom' should be from the below chromosomes:", names(objNull$LOCOList)))
+    stop(paste("'chrom' should be from the below chromosomes:", 
+               paste(names(objNull$LOCOList), collapse=",")))
   
   SubjID.step1 = objNull$subjIDs;
   
@@ -142,6 +144,8 @@ POLMM.Gene = function(objNull,
                                 NonZero_cutoff,
                                 StdStat_cutoff,
                                 SKAT.control)
+  
+  closePOLMMGENEobj()
   
   # out_One_Set = c(SetID, 
   #                 length(SNPsID),
@@ -383,6 +387,8 @@ POLMM.Gene.Main = function(GMat.list,          # output of Check_GMat()
                            StdStat_cutoff,
                            SKAT.control)
 {
+  SetID = GMat.list$SetID
+  
   if(GMat.list$error){
     # out_One_Set = c(SetID, 
     #                 length(SNPsID),
@@ -398,7 +404,6 @@ POLMM.Gene.Main = function(GMat.list,          # output of Check_GMat()
   }
   
   # extract information from GMat.list
-  SetID = GMat.list$SetID
   SNPsID = GMat.list$SNPsID
   GMat = GMat.list$GMat
   weights = GMat.list$weights

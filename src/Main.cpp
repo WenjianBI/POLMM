@@ -99,7 +99,7 @@ Rcpp::List fitPOLMMcpp(bool t_flagSparseGRM,       // if 1, then use SparseGRM, 
 }
 
 // make a global variable for region- and Gene-based association test
-POLMMGENEClass POLMMGENEobj;
+static POLMMGENEClass* ptr_POLMMGENEobj = NULL;
 
 // [[Rcpp::export]]
 void setPOLMMGENEobj(int t_maxiterPCG,
@@ -113,21 +113,28 @@ void setPOLMMGENEobj(int t_maxiterPCG,
                      int t_nMaxNonZero)
 {
   Rcpp::List KinMatList = getKinMatList(t_SparseGRM);
-  POLMMGENEobj.setPOLMMGENEobj(t_maxiterPCG, 
-                               t_tolPCG,
-                               t_Cova,
-                               t_yVec,
-                               t_tau,
-                               KinMatList,
-                               t_LOCOList,
-                               t_eta,
-                               t_nMaxNonZero);
+  
+  ptr_POLMMGENEobj = new POLMMGENEClass(t_maxiterPCG, 
+                                        t_tolPCG,
+                                        t_Cova,
+                                        t_yVec,
+                                        t_tau,
+                                        KinMatList,
+                                        t_LOCOList,
+                                        t_eta,
+                                        t_nMaxNonZero);
+}
+
+// [[Rcpp::export]]
+void closePOLMMGENEobj()
+{
+  delete ptr_POLMMGENEobj;
 }
 
 // [[Rcpp::export]]
 void setPOLMMGENEchr(Rcpp::List t_LOCOList, std::string t_excludechr)
 {
-  POLMMGENEobj.setPOLMMGENEchr(t_LOCOList, t_excludechr);
+  ptr_POLMMGENEobj->setPOLMMGENEchr(t_LOCOList, t_excludechr);
 }
 
 // [[Rcpp::export]]
@@ -135,16 +142,16 @@ Rcpp::List getStatVarS(arma::mat t_GMat,
                        double t_NonZero_cutoff,
                        double t_StdStat_cutoff)
 {
-  Rcpp::List OutList = POLMMGENEobj.getStatVarS(t_GMat,
-                                                t_NonZero_cutoff,
-                                                t_StdStat_cutoff);
+  Rcpp::List OutList = ptr_POLMMGENEobj->getStatVarS(t_GMat,
+                                                     t_NonZero_cutoff,
+                                                     t_StdStat_cutoff);
   return(OutList);
 }
 
 // [[Rcpp::export]]
 double getPvalERtoR(arma::vec t_GVec)
 {
-  double PvalER = POLMMGENEobj.getPvalERinClass(t_GVec);
+  double PvalER = ptr_POLMMGENEobj->getPvalERinClass(t_GVec);
   return PvalER;
 }
 

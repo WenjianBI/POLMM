@@ -100,6 +100,15 @@ BEGIN_RCPP
     return R_NilValue;
 END_RCPP
 }
+// closePOLMMGENEobj
+void closePOLMMGENEobj();
+RcppExport SEXP _POLMM_closePOLMMGENEobj() {
+BEGIN_RCPP
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    closePOLMMGENEobj();
+    return R_NilValue;
+END_RCPP
+}
 // setPOLMMGENEchr
 void setPOLMMGENEchr(Rcpp::List t_LOCOList, std::string t_excludechr);
 RcppExport SEXP _POLMM_setPOLMMGENEchr(SEXP t_LOCOListSEXP, SEXP t_excludechrSEXP) {
@@ -182,6 +191,7 @@ static const R_CallMethodDef CallEntries[] = {
     {"_POLMM_getProb", (DL_FUNC) &_POLMM_getProb, 2},
     {"_POLMM_fitPOLMMcpp", (DL_FUNC) &_POLMM_fitPOLMMcpp, 15},
     {"_POLMM_setPOLMMGENEobj", (DL_FUNC) &_POLMM_setPOLMMGENEobj, 9},
+    {"_POLMM_closePOLMMGENEobj", (DL_FUNC) &_POLMM_closePOLMMGENEobj, 0},
     {"_POLMM_setPOLMMGENEchr", (DL_FUNC) &_POLMM_setPOLMMGENEchr, 2},
     {"_POLMM_getStatVarS", (DL_FUNC) &_POLMM_getStatVarS, 3},
     {"_POLMM_getPvalERtoR", (DL_FUNC) &_POLMM_getPvalERtoR, 1},

@@ -25,6 +25,10 @@ setPOLMMGENEobj <- function(t_maxiterPCG, t_tolPCG, t_Cova, t_yVec, t_tau, t_Spa
     invisible(.Call(`_POLMM_setPOLMMGENEobj`, t_maxiterPCG, t_tolPCG, t_Cova, t_yVec, t_tau, t_SparseGRM, t_LOCOList, t_eta, t_nMaxNonZero))
 }
 
+closePOLMMGENEobj <- function() {
+    invisible(.Call(`_POLMM_closePOLMMGENEobj`))
+}
+
 setPOLMMGENEchr <- function(t_LOCOList, t_excludechr) {
     invisible(.Call(`_POLMM_setPOLMMGENEchr`, t_LOCOList, t_excludechr))
 }
