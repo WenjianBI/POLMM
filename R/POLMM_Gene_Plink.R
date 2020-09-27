@@ -159,7 +159,7 @@ POLMM.Gene.plink = function(objNull,
       setPOLMMGENEchr(objNull$LOCOList, chrom)
     }
   }
-  if(idx.trail == 10)
+  if(idx.trial == 10)
     stop("We have tried 10 times to set POLMMGENEchr but all failed!!")
   
   N = objNull$N
