@@ -179,6 +179,7 @@ POLMM.Gene.plink = function(objNull,
     # 
     markerIndex = match(SNPSet, bim.data$V2, nomatch = 0)
     markerIndex = markerIndex[markerIndex!=0]
+    markerIndex = unique(markerIndex)
     
     invisible(capture.output(GMat <- seqminer::readPlinkToMatrixByIndex(PlinkFile, subjIndex_Null, markerIndex), 
                              type="message"))
