@@ -383,6 +383,8 @@ void POLMMGENEClass::check_ZPZ_adjGVec(arma::vec t_adjGVec)
   std::cout << "m_excludechr\t" << m_excludechr << std::endl;
   std::cout << "adjGVecLong.head(10)\t" << adjGVecLong.head(10) << std::endl;
   std::cout << "iSigmaGVec.head(10)\t" << iSigmaGVec.head(10) << std::endl;
+  std::cout << "m_CovaMat.head_rows(10)\t" << m_CovaMat.head_rows(10) << std::endl;
+  std::cout << "m_iSigmaX_XSigmaX.head_rows(10)\t" << m_iSigmaX_XSigmaX.head_rows(10) << std::endl;
   std::cout << "PZ_adjGVec.head(10)\t" << PZ_adjGVec.head(10) << std::endl;
   std::cout << "ZPZ_adjGVec.head(10)\t" << ZPZ_adjGVec.head(10) << std::endl;
 }
