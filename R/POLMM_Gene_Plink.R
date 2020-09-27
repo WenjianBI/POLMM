@@ -150,9 +150,12 @@ POLMM.Gene.plink = function(objNull,
   # added on 09-27-2020, sometimes setPOLMMGENEchr does not work, use the section to make it work
   for(idx.trial in 1:10){
     errorCHR = checkError()
+    print(errorCHR)
+    print(is.na(errorCHR))
     if(!is.na(errorCHR)){
       break;
     }else{
+      print(paste("Start trial",idx.trial))
       setPOLMMGENEchr(objNull$LOCOList, chrom)
     }
   }
