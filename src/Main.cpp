@@ -155,5 +155,9 @@ double getPvalERtoR(arma::vec t_GVec)
   return PvalER;
 }
 
-
+// [[Rcpp::export]]
+void check_ZPZ_adjGVec(arma::vec t_adjGVec)
+{
+  ptr_POLMMGENEobj->check_ZPZ_adjGVec(t_adjGVec);
+}
 

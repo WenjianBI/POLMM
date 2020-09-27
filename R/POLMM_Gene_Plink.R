@@ -147,39 +147,51 @@ POLMM.Gene.plink = function(objNull,
   
   setPOLMMGENEchr(objNull$LOCOList, chrom)
   
-  nSet = length(obj.SNPSet)
+  N = objNull$N
+  memory.chunk = SKAT.control$memory.chunk
+  M.chunk = floor(memory.chunk * 1e9 / 4 / N)
+  print(paste0("Each chunk includes less than ", M.chunk, " markers."))
+  obj.SNPSet.chunks = split.obj.SNPSet.chunks(obj.SNPSet, M.chunk)
+  
+  n.chunks = length(obj.SNPSet.chunks)
   
   out_Multi_Set = c()
-  names.SNPSet = names(obj.SNPSet)
-  for(i in 1:nSet){
-    SNPSet = obj.SNPSet[[i]]
-    
+  for(i in 1:n.chunks){
+    obj.SNPSet = obj.SNPSet.chunks[[i]]
+    names.SNPSet = names(obj.SNPSet)
+    nSet = length(obj.SNPSet)
+    SNPSet = unlist(obj.SNPSet)
+    # 
     markerIndex = match(SNPSet, bim.data$V2, nomatch = 0)
     markerIndex = markerIndex[markerIndex!=0]
     
     invisible(capture.output(GMat <- seqminer::readPlinkToMatrixByIndex(PlinkFile, subjIndex_Null, markerIndex), 
                              type="message"))
+    
     colnames(GMat) = bim.data$V2[markerIndex]
     rownames(GMat) = fam.data$V2[subjIndex_Null]
-    SetName = names.SNPSet[i]
     
-    GMat.list = Check_GMat(GMat, SetName, SubjID.step1,
-                           kernel = SKAT.control$kernel, 
-                           weights.beta = SKAT.control$weights.beta, 
-                           impute.method = SKAT.control$impute.method,
-                           impute.MAF.cohort = SKAT.control$impute.MAF.cohort,
-                           missing_cutoff = SKAT.control$missing_cutoff, 
-                           max_maf = SKAT.control$max_maf)
-    
-    out_One_Set = POLMM.Gene.Main(GMat.list,          # output of Check_GMat()
-                                  NonZero_cutoff,
-                                  StdStat_cutoff,
-                                  SKAT.control)
-    
-    out_Multi_Set = rbind(out_Multi_Set, out_One_Set)
-    
+    for(j in 1:nSet){
+      SetName = names.SNPSet[j]
+      GMat1 = GMat[,obj.SNPSet[[j]]]
+      
+      GMat.list = Check_GMat(GMat1, SetName, SubjID.step1,
+                             kernel = SKAT.control$kernel, 
+                             weights.beta = SKAT.control$weights.beta, 
+                             impute.method = SKAT.control$impute.method,
+                             impute.MAF.cohort = SKAT.control$impute.MAF.cohort,
+                             missing_cutoff = SKAT.control$missing_cutoff, 
+                             max_maf = SKAT.control$max_maf)
+      
+      out_One_Set = POLMM.Gene.Main(GMat.list,          # output of Check_GMat()
+                                    NonZero_cutoff,
+                                    StdStat_cutoff,
+                                    SKAT.control)
+      
+      out_Multi_Set = rbind(out_Multi_Set, out_One_Set)
+    }
   }
-
+  
   closePOLMMGENEobj()
   colnames(out_Multi_Set) = c("SetID", "nSNP", "P.SKAT-O", "P.SKAT", "P.Burden",
                               "error.code", "SNP.Info", "SNP.MAF","SNP.AlleleFlip","SNP.beta","SNP.pvalue")
@@ -188,5 +200,34 @@ POLMM.Gene.plink = function(objNull,
 }
 
 
+split.obj.SNPSet.chunks = function(obj.SNPSet,
+                                   M.chunk)
+{
+  obj.SNPSet.chunks = list()
+  nSet = length(obj.SNPSet)
+  
+  idx.chunk = 1
+  idx.chunk.start = 1
+  idx.chunk.end = 1
+  nSNPs.chunk = 0
+  
+  for(i in 1:nSet){
+    nSNPs = length(obj.SNPSet[[i]])
+    
+    if(nSNPs >= M.chunk)
+      stop("One region includes more markers than the limitation from 'memory.chunk'. Check 'Details' for more information about 'memory.chunk'.")
+    
+    nSNPs.chunk = nSNPs.chunk + nSNPs
+    
+    if(nSNPs.chunk >= M.chunk | i == nSet){
+      idx.chunk.end = i
+      obj.SNPSet.chunks[[idx.chunk]] = obj.SNPSet[idx.chunk.start:idx.chunk.end]
+      idx.chunk.start = i + 1
+      idx.chunk = idx.chunk + 1
+      nSNPs.chunk = 0
+    }
+  }
+  return(obj.SNPSet.chunks)
+}
 
-
+# obj.SNPSet.chunks = split.obj.SNPSet.chunks(obj.SNPSet, M.chunk)

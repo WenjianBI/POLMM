@@ -215,7 +215,8 @@ check.SKAT.control = function(SKAT.control)
                               r.corr = NULL,
                               missing_cutoff = 0.15, 
                               max_maf = 0.05,
-                              SPAcutoff = 2)
+                              SPAcutoff = 2,
+                              memory.chunk = 4)
                               # to be continued)
   
   # use the default setting or update it
@@ -318,6 +319,7 @@ Check_GMat = function(GMat, SetName = NULL, SubjID.step1, kernel, weights.beta, 
   AlleleFlip.Vec = (MAF.Vec > 0.5)
   MAF.Vec[AlleleFlip.Vec] = 1 - MAF.Vec[AlleleFlip.Vec]
   MAC.Vec[AlleleFlip.Vec] = 2 * nrow(GMat) - MAC.Vec[AlleleFlip.Vec]
+  GMat[,AlleleFlip.Vec] = 2 - GMat[,AlleleFlip.Vec]
   
   # remove SNPs with large missing rate or MAF, or MAC == 0
   MissingRate.Vec = colMeans(is.na(GMat))                    # missing rate for all markers

@@ -371,6 +371,22 @@ void POLMMGENEClass::getPCGofSigmaAndVector(arma::vec t_y1Vec,    // vector with
   // }
 }
 
+void POLMMGENEClass::check_ZPZ_adjGVec(arma::vec t_adjGVec)
+{
+  arma::vec adjGVecLong = tZMat(t_adjGVec);  // that is Z %*% adjGVec
+  arma::vec iSigmaGVec(m_n * (m_J-1), arma::fill::zeros);
+  getPCGofSigmaAndVector(adjGVecLong, iSigmaGVec, m_excludechr);  // iSigmaGVec = Sigma^-1 %*% Z %*% adjGVec
+  
+  arma::vec PZ_adjGVec = iSigmaGVec - m_iSigmaX_XSigmaX * (m_CovaMat.t() * iSigmaGVec);
+  arma::vec ZPZ_adjGVec = ZMat(PZ_adjGVec);
+  
+  std::cout << "m_excludechr\t" << m_excludechr << std::endl;
+  std::cout << "adjGVecLong.head(10)\t" << adjGVecLong.head(10) << std::endl;
+  std::cout << "iSigmaGVec.head(10)\t" << iSigmaGVec.head(10) << std::endl;
+  std::cout << "PZ_adjGVec.head(10)\t" << PZ_adjGVec.head(10) << std::endl;
+  std::cout << "ZPZ_adjGVec.head(10)\t" << ZPZ_adjGVec.head(10) << std::endl;
+}
+
 arma::vec POLMMGENEClass::get_ZPZ_adjGVec(arma::vec t_adjGVec,
                                           string t_excludechr)
 {

@@ -99,6 +99,9 @@ public:
   
   // get single marker p values from ER or SPA
   double getPvalERinClass(arma::vec t_GVec);
+  
+  void check_ZPZ_adjGVec(arma::vec t_adjGVec);
+  
 };
 
 }
