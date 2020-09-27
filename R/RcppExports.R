@@ -41,6 +41,10 @@ getPvalERtoR <- function(t_GVec) {
     .Call(`_POLMM_getPvalERtoR`, t_GVec)
 }
 
+check_ZPZ_adjGVec <- function(t_adjGVec) {
+    invisible(.Call(`_POLMM_check_ZPZ_adjGVec`, t_adjGVec))
+}
+
 getobjP <- function(t_Cova, t_yMat, t_muMat, t_iRMat) {
     .Call(`_POLMM_getobjP`, t_Cova, t_yMat, t_muMat, t_iRMat)
 }
