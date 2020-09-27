@@ -102,6 +102,8 @@ public:
   
   void check_ZPZ_adjGVec(arma::vec t_adjGVec);
   
+  double checkError();
+  
 };
 
 }

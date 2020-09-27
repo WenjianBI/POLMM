@@ -147,6 +147,18 @@ POLMM.Gene.plink = function(objNull,
   
   setPOLMMGENEchr(objNull$LOCOList, chrom)
   
+  # added on 09-27-2020, sometimes setPOLMMGENEchr does not work, use the section to make it work
+  for(idx.trial in 1:10){
+    errorCHR = checkError()
+    if(!is.na(errorCHR)){
+      break;
+    }else{
+      setPOLMMGENEchr(objNull$LOCOList, chrom)
+    }
+  }
+  if(idx.trail == 10)
+    stop("We have tried 10 times to set POLMMGENEchr but all failed!!")
+  
   N = objNull$N
   memory.chunk = SKAT.control$memory.chunk
   M.chunk = floor(memory.chunk * 1e9 / 4 / N)

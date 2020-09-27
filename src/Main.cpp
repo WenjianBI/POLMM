@@ -161,3 +161,10 @@ void check_ZPZ_adjGVec(arma::vec t_adjGVec)
   ptr_POLMMGENEobj->check_ZPZ_adjGVec(t_adjGVec);
 }
 
+// [[Rcpp::export]]
+double checkError()
+{
+  double errorCHR = ptr_POLMMGENEobj->checkError();
+  return errorCHR;
+}
+

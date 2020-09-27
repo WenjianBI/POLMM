@@ -163,17 +163,17 @@ void POLMMGENEClass::setPOLMMGENEchr(Rcpp::List t_LOCOList, string t_excludechr)
   arma::mat iSigma_CovaMat(m_n * (m_J-1), m_p);
   getPCGofSigmaAndCovaMat(m_CovaMat, iSigma_CovaMat, t_excludechr);
   
-  arma::mat xMat = m_yMat.cols(0, m_J-2) - m_muMat.cols(0, m_J-2);
-  arma::mat iPsi_xMat = getiPsixMat(xMat);
-  arma::mat YMat(m_n, m_J-1, arma::fill::zeros);
-  for(int i = 0; i < m_n; i++){  // loop for samples
-    for(int j = 0; j < m_J-1; j++)
-      YMat(i,j) = m_eta(i) + (m_iRMat(i,j) * iPsi_xMat(i,j));
-  }
-  
-  arma::vec YVec = convert1(YMat, m_n, m_J);
-  arma::vec iSigma_YVec(m_n * (m_J-1));
-  getPCGofSigmaAndVector(YVec, iSigma_YVec, t_excludechr); 
+  // arma::mat xMat = m_yMat.cols(0, m_J-2) - m_muMat.cols(0, m_J-2);
+  // arma::mat iPsi_xMat = getiPsixMat(xMat);
+  // arma::mat YMat(m_n, m_J-1, arma::fill::zeros);
+  // for(int i = 0; i < m_n; i++){  // loop for samples
+  //   for(int j = 0; j < m_J-1; j++)
+  //     YMat(i,j) = m_eta(i) + (m_iRMat(i,j) * iPsi_xMat(i,j));
+  // }
+  // 
+  // arma::vec YVec = convert1(YMat, m_n, m_J);
+  // arma::vec iSigma_YVec(m_n * (m_J-1));
+  // getPCGofSigmaAndVector(YVec, iSigma_YVec, t_excludechr); 
   
   arma::mat XSigmaX = inv(m_CovaMat.t() * iSigma_CovaMat);
   m_iSigmaX_XSigmaX = iSigma_CovaMat * XSigmaX;
@@ -387,6 +387,11 @@ void POLMMGENEClass::check_ZPZ_adjGVec(arma::vec t_adjGVec)
   std::cout << "m_iSigmaX_XSigmaX.head_rows(10)\t" << m_iSigmaX_XSigmaX.head_rows(10) << std::endl;
   std::cout << "PZ_adjGVec.head(10)\t" << PZ_adjGVec.head(10) << std::endl;
   std::cout << "ZPZ_adjGVec.head(10)\t" << ZPZ_adjGVec.head(10) << std::endl;
+}
+
+double POLMMGENEClass::checkError(){
+  double errorCHR = m_iSigmaX_XSigmaX(0,0);
+  return errorCHR;
 }
 
 arma::vec POLMMGENEClass::get_ZPZ_adjGVec(arma::vec t_adjGVec,

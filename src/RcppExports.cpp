@@ -154,6 +154,16 @@ BEGIN_RCPP
     return R_NilValue;
 END_RCPP
 }
+// checkError
+double checkError();
+RcppExport SEXP _POLMM_checkError() {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    rcpp_result_gen = Rcpp::wrap(checkError());
+    return rcpp_result_gen;
+END_RCPP
+}
 // getobjP
 Rcpp::List getobjP(arma::mat t_Cova, arma::mat t_yMat, arma::mat t_muMat, arma::mat t_iRMat);
 RcppExport SEXP _POLMM_getobjP(SEXP t_CovaSEXP, SEXP t_yMatSEXP, SEXP t_muMatSEXP, SEXP t_iRMatSEXP) {
@@ -206,6 +216,7 @@ static const R_CallMethodDef CallEntries[] = {
     {"_POLMM_getStatVarS", (DL_FUNC) &_POLMM_getStatVarS, 3},
     {"_POLMM_getPvalERtoR", (DL_FUNC) &_POLMM_getPvalERtoR, 1},
     {"_POLMM_check_ZPZ_adjGVec", (DL_FUNC) &_POLMM_check_ZPZ_adjGVec, 1},
+    {"_POLMM_checkError", (DL_FUNC) &_POLMM_checkError, 0},
     {"_POLMM_getobjP", (DL_FUNC) &_POLMM_getobjP, 4},
     {"_POLMM_outputadjGFast", (DL_FUNC) &_POLMM_outputadjGFast, 2},
     {"_POLMM_getyMatR", (DL_FUNC) &_POLMM_getyMatR, 3},
