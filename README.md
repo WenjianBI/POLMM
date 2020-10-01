@@ -25,4 +25,4 @@ Please do not hesitate to contact me (wenjianb@umich.edu) if you meet any proble
 
 ### PheWeb for UK Biobank data analysis results
 
-We have applied this method to analyze 108 categorical phenotypes in UK Biobank data of 408,961 samples from white British participants with European ancestry. The results can be found in http://polmm.leelabsg.org/.
+We have applied this method to analyze 258 categorical phenotypes in UK Biobank data of 408,961 samples from white British participants with European ancestry. The results can be found in http://polmm.leelabsg.org/.
