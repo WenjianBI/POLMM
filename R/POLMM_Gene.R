@@ -461,7 +461,9 @@ POLMM.Gene.Main = function(GMat.list,          # output of Check_GMat()
   
   # Burden test p value is more significant than the pre-given cutoff
   if(ncol(OutList$adjGMat) == 1){
-    VarQ.BT = sum(diag(wadjVarSMat))
+    # VarQ.BT = sum(diag(wadjVarSMat))
+    # updated on 10-05-2020
+    VarQ.BT = sum(wadjVarSMat)
     # extract useful information from OutList
     Stat = OutList$StatVec[1,1]
     VarS = OutList$VarSMat[1,1]
