@@ -457,7 +457,8 @@ POLMM.Gene.Main = function(GMat.list,          # output of Check_GMat()
   
   ## use another ratio to adjust for variance matrix based on Burden Test
   GMat.BT = matrix(colSums(t(GMat) * weights), ncol=1)
-  OutList = getStatVarS(GMat.BT, 0, StdStat_cutoff)
+  # OutList = getStatVarS(GMat.BT, 0, StdStat_cutoff)
+  OutList = getStatVarS(GMat.BT, 0, 0)  # change StdStat_cutoff to 0 to check the results only
   
   # Burden test p value is more significant than the pre-given cutoff
   if(ncol(OutList$adjGMat) == 1){
@@ -484,6 +485,8 @@ POLMM.Gene.Main = function(GMat.list,          # output of Check_GMat()
       ratio = 1
     }else{
       ratio = VarQ.BT / adjVarQ.BT
+      print(paste("ratio:",ratio))
+      print(paste("pval.BT:",pval.BT))
       ratio = min(1, ratio)
     }
     
