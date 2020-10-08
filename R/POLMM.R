@@ -285,11 +285,18 @@ fastSaddle_Prob = function(Stat,
     p2 <- fastGet_Saddle_Prob(-1*abs(adjStat), out.uni2$root, out.uni2$K2_eval, Ratio0, muMat1, cMat, m1, lower.tail=TRUE)
     
     pval = p1 + p2;
+    
     converge = T;
     K1roots = c(out.uni1$root, out.uni2$root)
   }else{
     print("SPA does not converge, use normal approximation p value.")
     pval = 2*pnorm(-1*abs(adjStat), lower.tail=T)
+  }
+  
+  if(is.na(pval)){
+    print("SPA does not give a valid p value, use normal approximation p value.")
+    pval = 2*pnorm(-1*abs(adjStat), lower.tail=T)
+    converge = F;
   }
   
   return(list(pval=pval, converge=converge, K1roots=K1roots))
