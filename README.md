@@ -16,7 +16,7 @@ install_github("WenjianBi/POLMM")
 library(POLMM)
 ?POLMM  # manual of POLMM() function with an example code, expected output and expected run time for demo
 ```
-Current version is 0.2.2. For older version and version update information, plesase refer to OldVersions/. The package installation typically requires < 3 minutes on a normal desktop computer. 
+Current version is 0.2.3. The package installation typically requires < 3 minutes on a normal desktop computer. 
 
 Please do not hesitate to contact me (wenjianb@umich.edu) if you meet any problem. Suggestions or comments are also welcome.
 
