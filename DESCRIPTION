@@ -1,12 +1,12 @@
 Package: POLMM
 Type: Package
 Title: Proportional Odds Logistic Mixed Model (POLMM) for ordinal categorical data analysis
-Version: 0.2.2
-Date: 2020-07-31
+Version: 0.2.3
+Date: 2020-10-09
 Author: Wenjian Bi, Seunggeun (Shawn) Lee
 Maintainer: Wenjian Bi <wenjianb@umich.edu>
 Description: Proportional Odds Logistic Mixed Model (POLMM) for ordinal categorical data analysis
 License: GPL (>= 3)
-Imports: Rcpp (>= 1.0.0), RcppParallel, RcppArmadillo, ordinal (>= 2019.12-10), data.table (>= 1.12.2), seqminer (>= 8.0)
+Imports: Rcpp (>= 1.0.0), RcppParallel, RcppArmadillo, ordinal (>= 2019.12-10), data.table (>= 1.12.2), seqminer (>= 8.0), SKAT (>= 2.0.0), Matrix (>= 1.2-18)
 LinkingTo: Rcpp, RcppArmadillo, RcppParallel
 RoxygenNote: 7.1.0

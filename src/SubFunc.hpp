@@ -64,15 +64,14 @@ Rcpp::List outputadjGFast(arma::vec GVec,
 arma::vec getadjGFast(arma::vec GVec,
                       arma::mat XXR_Psi_RX_new,   // XXR_Psi_RX_new ( n x p )
                       arma::mat XR_Psi_R_new,     // XR_Psi_R_new ( p x n ), sum up XR_Psi_R ( p x n(J-1) ) for each subject 
-                      int n, int J, int p);
+                      int n, int p);
 
 double getStatFast(arma::vec GVec,         // n x 1
-                   arma::vec RymuVec,      // n x 1: row sum of the n x (J-1) matrix R %*% (yMat - muMat)
-                   int n);
+                   arma::vec RymuVec);     // n x 1: row sum of the n x (J-1) matrix R %*% (yMat - muMat)
 
-double getVarWFast(arma::vec adjGVec,  // n x 1
-                   arma::vec RPsiRVec, // n x 1
-                   int n, int J);
+double getVarWFast(arma::vec adjGVec,     // n x 1
+                   arma::vec RPsiRVec);   // n x 1
+              
 
 arma::mat getyMatR(arma::mat yVec, int n, int J);
   

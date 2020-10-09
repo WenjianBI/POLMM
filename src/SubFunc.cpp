@@ -261,9 +261,9 @@ double getInnerProd(arma::mat& x1Mat, arma::mat& x2Mat)
 Rcpp::List outputadjGFast(arma::vec GVec,
                           Rcpp::List objP)
 {
-  arma::vec adjGVec = getadjGFast(GVec, objP["XXR_Psi_RX_new"], objP["XR_Psi_R_new"], objP["n"], objP["J"], objP["p"]);
-  double Stat = getStatFast(adjGVec, objP["RymuVec"], objP["n"]);
-  double VarW = getVarWFast(adjGVec, objP["RPsiR"], objP["n"], objP["J"]);
+  arma::vec adjGVec = getadjGFast(GVec, objP["XXR_Psi_RX_new"], objP["XR_Psi_R_new"], objP["n"], objP["p"]);
+  double Stat = getStatFast(adjGVec, objP["RymuVec"]);
+  double VarW = getVarWFast(adjGVec, objP["RPsiR"]);
   Rcpp::List outList = List::create(Named("adjGVec")=adjGVec,
                                     Named("Stat")=Stat,           
                                     Named("VarW")=VarW);
@@ -274,7 +274,7 @@ Rcpp::List outputadjGFast(arma::vec GVec,
 arma::vec getadjGFast(arma::vec GVec,
                       arma::mat XXR_Psi_RX_new,   // XXR_Psi_RX_new ( n x p )
                       arma::mat XR_Psi_R_new,     // XR_Psi_R_new ( p x n ), sum up XR_Psi_R ( p x n(J-1) ) for each subject 
-                      int n, int J, int p)
+                      int n, int p)
 {
   // To increase computational efficiency when lots of GVec elements are 0
   arma::vec XR_Psi_RG1(p, arma::fill::zeros);
@@ -289,9 +289,9 @@ arma::vec getadjGFast(arma::vec GVec,
 }
 
 double getStatFast(arma::vec GVec,         // n x 1
-                   arma::vec RymuVec,      // n x 1: row sum of the n x (J-1) matrix R %*% (yMat - muMat)
-                   int n)
+                   arma::vec RymuVec)      // n x 1: row sum of the n x (J-1) matrix R %*% (yMat - muMat)
 {
+  int n = GVec.size();
   double Stat = 0;
   for(int i = 0; i < n; i++){
     if(GVec(i) != 0){
@@ -302,9 +302,9 @@ double getStatFast(arma::vec GVec,         // n x 1
 }
 
 double getVarWFast(arma::vec adjGVec,  // n x 1
-                   arma::vec RPsiRVec, // n x 1
-                   int n, int J)
+                   arma::vec RPsiRVec) // n x 1
 {
+  int n = adjGVec.size();
   double VarW = 0;
   for(int i = 0; i < n; i++){
     VarW += RPsiRVec(i) * adjGVec(i) * adjGVec(i);

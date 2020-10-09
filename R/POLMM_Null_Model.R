@@ -191,9 +191,6 @@ POLMM_Null_Model = function(formula,
     posSampleInPlink = match(subjData, subjGRM, 0)
     if(any(posSampleInPlink == 0))
       stop("All subjects in 'subjData' should be in famFile or SparseGRM")
-  }else{
-    bimFile = bedFile = famFile = "FileNotNeeded";
-    posSampleInPlink = 1;
   }
   
   ######## -------------- fit the null POLMM --------------  ###########

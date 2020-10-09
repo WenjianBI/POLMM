@@ -214,15 +214,17 @@ POLMM = function(objNull,
       VarWVec = RPsiR * adjGVec^2
       VarW = sum(VarWVec)
       # VarW0 = sum(VarWVec[posG0])
-      VarW1 = sum(VarWVec[posG1])
-      VarW0 = VarW - VarW1
-      Ratio0 = VarW0/VarW
+      
       VarP = VarW * r
       z = abs(Stat)/sqrt(VarP)
       beta = Stat / VarP
       pval.spa = pval.norm = 2*pnorm(-1*z, lower.tail=T)
       
       if(z > SPAcutoff){
+        VarW1 = sum(VarWVec[posG1])
+        VarW0 = VarW - VarW1
+        Ratio0 = VarW0/VarW
+        
         res.spa <- fastSaddle_Prob(Stat, VarP, VarW, Ratio0, K1roots,
                                    adjGVec[posG1], muMat1[posG1,], iRMat[posG1,])
         pval.spa = res.spa$pval
@@ -283,11 +285,18 @@ fastSaddle_Prob = function(Stat,
     p2 <- fastGet_Saddle_Prob(-1*abs(adjStat), out.uni2$root, out.uni2$K2_eval, Ratio0, muMat1, cMat, m1, lower.tail=TRUE)
     
     pval = p1 + p2;
+    
     converge = T;
     K1roots = c(out.uni1$root, out.uni2$root)
   }else{
     print("SPA does not converge, use normal approximation p value.")
     pval = 2*pnorm(-1*abs(adjStat), lower.tail=T)
+  }
+  
+  if(is.na(pval)){
+    print("SPA does not give a valid p value, use normal approximation p value.")
+    pval = 2*pnorm(-1*abs(adjStat), lower.tail=T)
+    converge = F;
   }
   
   return(list(pval=pval, converge=converge, K1roots=K1roots))

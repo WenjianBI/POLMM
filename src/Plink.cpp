@@ -102,9 +102,10 @@ arma::mat PlinkClass::getGMat(int t_nMarker,
     }
   }
   
+  cout << "Extract" << posGMat << " markers!" << endl;
+  
   if(i == indexSNPs.size()){
-    cout << "Only extract " << posGMat << " markers!" << endl;
-    stop("Probably give an incorrect chromosome name!");
+    stop("Do NOT extract enough markers from plink files. Probably give an incorrect chromosome name!");
   }
   
   return GMat;

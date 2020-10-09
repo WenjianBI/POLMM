@@ -3,7 +3,7 @@
 #' Test for association between genotype and an ordinal categorical variable via Proportional Odds Logistic Mixed Model (POLMM)
 #' 
 #' @param objNull output object of the POLMM_Null_Model() function 
-#' @param PlinkFile character, represents the prefix of PLINK input file.
+#' @param plink.file character, represents the prefix of PLINK input file.
 #' @param output.file character, represents the prefix of output file.
 #' @param memory.chunk a numeric value (default: 4, unit=Gb) to specify how much memory is used to store genotype matrix from plink files.
 #' @param chrVec a character or a character vector to specify chromosome(s) of the markers in Geno.mtx. Must be specified unless LOCO = F.
@@ -62,71 +62,82 @@
 #' outPOLMM = read.table(outFile, header = T)
 #' head(outPOLMM)
 #' @export
-#' @import seqminer
-
-POLMM.plink = function(objNull,
-                       PlinkFile,            # plink prefix
-                       output.file,
-                       chrVec.plink,
-                       memory.chunk = 4,
-                       SPAcutoff = 2,
-                       minMAF = 0.0001,
-                       maxMissing = 0.15,
-                       impute.method = "fixed",
-                       G.model = "Add")
+#' @import data.table
+#' @import tidyr
+#' @import dbplyr
+#' @import RSQLite
+POLMM.bgen = function(objNull,
+                      bgen.file,            # plink prefix
+                      bgi.file,
+                      sample.file,
+                      output.file,
+                      chrVec.bgen = NULL,
+                      memory.chunk = 4,
+                      SPAcutoff = 2,
+                      minMAF = 0.0001,
+                      maxMissing = 0.15,
+                      impute.method = "fixed",
+                      G.model = "Add")
 {
-  # check plink files input
-  out.plink = check.PlinkFile(PlinkFile)
-  fam.data = out.plink$fam.data
-  bim.data = out.plink$bim.data
+  ## check if SAIGE has been installed
+  
+  SI = sessionInfo()
+  if(!is.element("SAIGE",names(SI$otherPkgs)))
+    stop("We use function in SAIGE package to read in bgen files. Please install SAIGE package (0.36.3.3: only supports linux OS) first. It works for bgen-1.3 with 8 bits.")
+  
+  ## check bgen files input
+  
+  if(!file.exists(bgen.file)) stop("Could not find bgen.file")
+  if(!file.exists(bgi.file)) stop("Could not find bgi.file")
+  if(!file.exists(sample.file)) stop("Could not find sample.file")
   
   if(file.exists(output.file)) 
     stop("'output.file' existed. Please give a different 'output.file' or remove the existing 'output.file'.")
   
-  
-  
   subjIDs_Null = objNull$subjIDs
-  gIDs = fam.data$V2
-  chrVecTot = bim.data$V1
+  
+  samples = data.table::fread(sample.file)
+  gIDs = samples$ID_2
   
   subjIndex_Null = match(subjIDs_Null, gIDs, nomatch = 0)
   if(any(subjIndex_Null == 0)) stop("All subjects in null model fitting should be also in plink files.")
   
-  N = length(subjIndex_Null)
-  M = nrow(bim.data)
+  RangesList = split.ranges.bgen(bgi.file, length(subjIDs_Null), memory.chunk)
   
-  if(missing(chrVec.plink)){
-    pos = 1:M
-  }else{
-    pos = which(is.element(chrVecTot, chrVec.plink))
-  }
-  M1 = length(pos)
+  M = RangesList$M
+  RSID.set = RangesList$RSID.set
   
   print(paste0("Totally ", M, " markers in plink files."))
-  print(paste0("After filtering by 'chrVec.plink', ", M1, " markers are left."))
+
+  if(!is.null(chrVec.bgen))
+    Ranges = subset(Ranges, is.element(chr, chrVec.bgen))
   
-  M.chunk = floor(memory.chunk * 1e9 / 4 / N)
-  n.chunk = ceiling(M1 / M.chunk)
+  # n.chunk = nrow(Ranges)
+  n.chunk = length(RSID.set)
   
   print(paste0("Split all markers into ", n.chunk, " chunks."))
-  print(paste0("Each chunk includes less than ", M.chunk, " markers."))
+  # print(paste0("Each chunk includes less than ", M.chunk, " markers."))
   
   for(i in 1:n.chunk){
-    if(i == n.chunk){
-      markerIndex = ((n.chunk-1)*M.chunk+1):M1;
-    }else{
-      markerIndex = 1:M.chunk + (i-1) * M.chunk;
-    }
     print(paste0("Analyzing chunk ",i,"/",n.chunk,"."))
-    markerIndex = pos[markerIndex]
+    # chr = Ranges$chr[i]
+    # pos.start = Ranges$pos.start[i]
+    # pos.end = Ranges$pos.end[i]
+    rsid = RSID.set[[i]]
     
-    Geno.mtx = seqminer::readPlinkToMatrixByIndex(PlinkFile, subjIndex_Null, markerIndex)
-    colnames(Geno.mtx) = bim.data$V2[markerIndex]
+    Geno.mtx = SAIGE.read.bgen.range(bgen.file, 
+                                     bgi.file, 
+                                     rsid,
+                                     # chr,
+                                     # pos.start,
+                                     # pos.end,
+                                     subjIDs_Null,
+                                     gIDs)
     
     if(names(objNull$LOCOList)[1] == "LOCO=F"){
-      chrVec = rep("LOCO=F", length(markerIndex))
+      chrVec = "LOCO=F"
     }else{
-      chrVec = chrVecTot[markerIndex]
+      chrVec = chr
     }
     
     output = POLMM(objNull, Geno.mtx, chrVec, 
@@ -140,6 +151,7 @@ POLMM.plink = function(objNull,
       data.table::fwrite(output, output.file, sep = "\t", append = T, row.names = F, col.names = F,
                          na = "NA")
     }
+    
   }
   
   print("Analysis Complete.")
@@ -149,19 +161,90 @@ POLMM.plink = function(objNull,
   
 }
 
-check.PlinkFile = function(PlinkFile)
+split.ranges.bgen = function(bgi.file, nSubj, memory.chunk)
 {
-  bim.file = paste0(PlinkFile, ".bim")
-  bed.file = paste0(PlinkFile, ".bed")
-  fam.file = paste0(PlinkFile, ".fam")
+  db_con <- RSQLite::dbConnect(RSQLite::SQLite(), bgi.file)
+  on.exit(RSQLite::dbDisconnect(db_con), add = TRUE)
   
-  if(!file.exists(bim.file)) stop("Could not find paste0(PlinkFile,'.bim')")
-  if(!file.exists(bed.file)) stop("Could not find paste0(PlinkFile,'.bed')")
-  if(!file.exists(fam.file)) stop("Could not find paste0(PlinkFile,'.fam')")
+  infos = dplyr::tbl(db_con, "Variant") %>% dplyr::select(chromosome, position, rsid) %>% dplyr::arrange(chromosome, position) %>% dplyr::collect(rsid)
   
-  fam.data = read.table(fam.file, stringsAsFactors = F)
-  bim.data = read.table(bim.file, stringsAsFactors = F)
+  M = nrow(infos)
   
-  out.plink = list(fam.data = fam.data,
-                   bim.data = bim.data)
+  uchr = unique(infos$chromosome)
+  
+  nEachRange = floor(memory.chunk * 1e9 / nSubj / 4) # "double" needs 4 bytes
+  
+  # Ranges = c()
+  RSID.set = list()
+  idx = 1
+  for(chr in uchr){
+    infos1 = infos %>% dplyr::filter(chromosome == chr)
+    nchr = nrow(infos1)
+    idx.start = seq(1, nchr, nEachRange)
+    idx.end = c(idx.start[-1]-1, nchr)
+    # pos.start = infos1$position[idx.start]
+    # pos.end = infos1$position[idx.end]
+    # range = paste0(chr, ":", pos.start, "-", pos.end)
+    # range = c(chr, pos.start, pos.end)
+    # Ranges = rbind(Ranges, range)
+    for(j in 1:length(idx.start)){
+      RSID.set[[idx]] = infos1$rsid[idx.start[j]:idx.end[j]]
+      idx = idx + 1
+    }
+  }
+  # Ranges = as.data.frame(Ranges, stringsAsFactors = F)
+  # colnames(Ranges) = c("chr", "pos.start", "pos.end")
+  
+  # return(list(Ranges = Ranges, M = M))
+  return(list(RSID.set = RSID.set, M = M))
 }
+
+
+SAIGE.read.bgen.range = function(bgen.file, 
+                                 bgi.file, 
+                                 rsid,
+                                 # chr,
+                                 # pos.start,
+                                 # pos.end
+                                 subjIDs_Null,
+                                 gIDs)
+{
+  sampleIndex = match(gIDs, subjIDs_Null, nomatch = NA)
+  N = sum(!is.na(sampleIndex))
+  
+  ##########
+  
+  bgenFile = bgen.file
+  bgenFileIndex = bgi.file
+  
+  # ranges_to_include = data.frame(chromosome = chr, 
+  #                                start = as.numeric(pos.start), 
+  #                                end = as.numeric(pos.end))
+  ranges_to_include = ranges_to_exclude = data.frame(chromosome = NULL, start = NULL, end = NULL)
+  ids_to_exclude = as.character(vector())
+  ids_to_include = rsid
+  
+  Mtest = SAIGE:::setgenoTest_bgenDosage(bgenFile,
+                                         bgenFileIndex,
+                                         ranges_to_exclude = ranges_to_exclude,
+                                         ranges_to_include = ranges_to_include,
+                                         ids_to_exclude = ids_to_exclude,
+                                         ids_to_include = ids_to_include)
+  
+  SAIGE:::SetSampleIdx(sampleIndex-1, N)
+  
+  Geno.mtx = matrix(0, N, Mtest)
+  SNPID = rep(0,Mtest)
+  for(i in 1:Mtest){
+    Gx = SAIGE:::getDosage_bgen_withquery()
+    markerInfo = SAIGE:::getMarkerInfo()
+    Geno.mtx[,i] = Gx$dosage
+    SNPID[i] = Gx$variants$rsid
+  }
+  
+  rownames(Geno.mtx) = subjIDs_Null
+  colnames(Geno.mtx) = SNPID
+  return(Geno.mtx)
+}
+
+
