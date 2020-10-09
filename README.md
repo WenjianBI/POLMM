@@ -4,7 +4,7 @@ Proportional Odds Logistic Mixed Model (POLMM) for ordinal categorical data anal
 ### Software dependencies and operating systems
 The package has been tested under linux and windows systems. 
 
-To make a sparse GRM, the package includes codes of GCTA software (version 1.93.1beta, https://cnsgenomics.com/software/gcta/#fastGWA); to read in bgen data input, the package requires installing SAIGE package (version 0.36.3, https://github.com/weizhouUMICH/SAIGE). These two functions are only supposed in linux system.
+To make a sparse GRM, the package includes codes of GCTA software (version 1.93.1beta, https://cnsgenomics.com/software/gcta/#fastGWA); to read in bgen data input, the package requires installing SAIGE package (version 0.36.3, https://github.com/weizhouUMICH/SAIGE). These two functions are only supported in linux system since the software dependencies are only supported in linux system.
 
 License: GPL (>= 3)
 
