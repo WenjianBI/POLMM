@@ -1,15 +1,22 @@
 # POLMM
 Proportional Odds Logistic Mixed Model (POLMM) for ordinal categorical data analysis
 
+### Software dependencies and operating systems
+The package has been tested under linux and windows systems. 
+
+To make a sparse GRM, the package includes codes of GCTA software (version 1.93.1beta, https://cnsgenomics.com/software/gcta/#fastGWA); to read in bgen data input, the package requires installing SAIGE package (version 0.36.3, https://github.com/weizhouUMICH/SAIGE). These two functions are only supposed in linux system.
+
+License: GPL (>= 3)
+
 ### How to install and load this package
 
 ```{r}      
 library(devtools)  # author version: 2.3.0
 install_github("WenjianBi/POLMM")
 library(POLMM)
-?POLMM  # manual of POLMM() function with an example code
+?POLMM  # manual of POLMM() function with an example code, expected output and expected run time for demo
 ```
-Current version is 0.2.2. For older version and version update information, plesase refer to OldVersions/
+Current version is 0.2.2. For older version and version update information, plesase refer to OldVersions/. The package installation typically requires < 3 minutes on a normal desktop computer. 
 
 Please do not hesitate to contact me (wenjianb@umich.edu) if you meet any problem. Suggestions or comments are also welcome.
 
