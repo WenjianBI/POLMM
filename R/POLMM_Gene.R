@@ -451,6 +451,10 @@ POLMM.Gene.Main = function(GMat.list,          # output of Check_GMat()
   StatVec = ifelse(is.infinite(adjVarSVec), 0, StatVec)
   
   r0 = adjVarSVec / VarSVec  # adjVarSVec might be 0
+  
+  ## added on 10-15-2020
+  r0 = pmax(r0, 1)
+  
   wr0 = sqrt(r0) * weights
   
   wadjVarSMat = t(VarSMat * wr0) * wr0
@@ -465,6 +469,7 @@ POLMM.Gene.Main = function(GMat.list,          # output of Check_GMat()
     # VarQ.BT = sum(diag(wadjVarSMat))
     # updated on 10-05-2020
     VarQ.BT = sum(wadjVarSMat)
+    
     # extract useful information from OutList
     Stat = OutList$StatVec[1,1]
     VarS = OutList$VarSMat[1,1]
@@ -473,6 +478,7 @@ POLMM.Gene.Main = function(GMat.list,          # output of Check_GMat()
     K1roots = c(0,0)
     posG1 = which(GMat.BT[,1] != 0)
     adjGVec = OutList$adjGMat[posG1,1]
+    
     # calculate p value of Burden test from saddlepoint approximation
     res.spa = fastSaddle_Prob(Stat, VarS, 
                               VarW, Ratio0, 
