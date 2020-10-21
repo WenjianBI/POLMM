@@ -4,9 +4,8 @@
 #' Test for association between genetic variants and an ordinal categorical variable via Proportional Odds Logistic Mixed Model (POLMM-Gene)
 #' 
 #' @param objNull the output of the POLMM_Null_Model() function 
-#' @param GMat a numeric genotype matrix with each row as a subject and each column as a marker in a region or gene.
-#'             Name of marker set, column names of marker IDs, and row names of individual IDs are all required.
-#'             Missng genotype should be coded as 9 or NA. Both hard-called and imputed genotype are supported.
+#' @param PlinkFile character, represents the prefix of PLINK input file.
+#' @param obj.SNPSet an R list with names of variant set and elements of variants IDs in the set
 #' @param chrom a character to specify chromosome of the markers in GMat. Must be specified unless LOCO = F when fitting the null model.
 #' @param SparseGRM an object of class "SparseGRM", check help(getSparseGRM) for more details.
 #' @param SKAT.control a list of parameters for controlling the POLMM.Gene(). Check 'Details' Section for more details.

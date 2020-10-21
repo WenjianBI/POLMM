@@ -63,6 +63,7 @@
 #' head(outPOLMM)
 #' @export
 #' @import seqminer
+#' @import data.table
 
 POLMM.plink = function(objNull,
                        PlinkFile,            # plink prefix
@@ -159,8 +160,8 @@ check.PlinkFile = function(PlinkFile)
   if(!file.exists(bed.file)) stop("Could not find paste0(PlinkFile,'.bed')")
   if(!file.exists(fam.file)) stop("Could not find paste0(PlinkFile,'.fam')")
   
-  fam.data = read.table(fam.file, stringsAsFactors = F)
-  bim.data = read.table(bim.file, stringsAsFactors = F)
+  fam.data = data.table::fread(fam.file, stringsAsFactors = F)
+  bim.data = data.table::fread(bim.file, stringsAsFactors = F)
   
   out.plink = list(fam.data = fam.data,
                    bim.data = bim.data)

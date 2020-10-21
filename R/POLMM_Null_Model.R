@@ -261,7 +261,8 @@ updateCtrl = function(control.new){
   return(control)
 }
 
-updateSparseGRM = function(SparseGRM, subjData){
+updateSparseGRM = function(SparseGRM, subjData)
+{
   names = names(SparseGRM)
   KinMatListR = list();
   
@@ -272,28 +273,30 @@ updateSparseGRM = function(SparseGRM, subjData){
     print(paste0("Updating chromosome ", excludeChr, " in 'SparseGRM' based on 'subjData'."))
     
     tempGRM1 = SparseGRM[[excludeChr]]
-    # updated on 05-14-2020
-    tempGRM2 = data.frame(ID1=tempGRM1$ID2,
-                          ID2=tempGRM1$ID1,
-                          value=tempGRM1$value)
+    tempGRM1 = subset(tempGRM1, ID1 %in% subjData & ID2 %in% subjData)
     
-    tempGRM = rbind(tempGRM1, tempGRM2)
-    tempGRM = tempGRM[-1*which(duplicated(tempGRM)),]
+    row.diag = which(tempGRM1$ID1 == tempGRM1$ID2)
+    tempGRM1.diag = tempGRM1[row.diag,]
+    tempGRM1.off.d1 = tempGRM1[-1*row.diag,]
+    tempGRM1.off.d2 = data.frame(ID1 = tempGRM1.off.d1$ID2,
+                                 ID2 = tempGRM1.off.d1$ID1,
+                                 value = tempGRM1.off.d1$value)
+    
+    tempGRM = rbind(tempGRM1.diag, tempGRM1.off.d1, tempGRM1.off.d2)
     
     ID1 = tempGRM$ID1;
     ID2 = tempGRM$ID2;
     value = tempGRM$value;
     
     if(any(!is.element(subjData, ID1)))
-      stop("At least one of subjects is not in SparseGRM.")
+      stop("At least one of subjects in `subjData` is not in `SparseGRM`.")
     
     location1 = match(ID1, subjData);
     location2 = match(ID2, subjData);
-    pos = which(!is.na(location1) & !is.na(location2))
-    locations = rbind(location1[pos]-1,  # -1 is to convert R to C++
-                      location2[pos]-1)
     
-    value = value[pos];
+    locations = rbind(location1 - 1,  # -1 is to convert R to C++
+                      location2 - 1)
+    
     nSubj = length(subjData);
     KinMatListR[[excludeChr]] = list(locations = locations,
                                      values = value,
