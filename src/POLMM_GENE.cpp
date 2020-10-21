@@ -58,7 +58,8 @@ Rcpp::List POLMMGENEClass::getStatVarS(arma::mat t_GMat,
     StdStatVec(i) = StdStat;
     
     // Efficient Resampling (ER)
-    if(NonZero <= t_NonZero_cutoff){  
+    // if(NonZero <= t_NonZero_cutoff){  // updated on 10-15-2020
+    if(NonZero <= t_NonZero_cutoff && StdStat > t_StdStat_cutoff){  
       idxERVec(i) = 1;
     }
     
