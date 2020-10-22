@@ -276,7 +276,14 @@ check.SKAT.control = function(SKAT.control)
 
 ####### ---------- Check the GMat matrix, and do imputation ---------- #######
 
-Check_GMat = function(GMat, SetName = NULL, SubjID.step1, kernel, weights.beta, impute.method, impute.MAF.cohort, missing_cutoff, max_maf)
+Check_GMat = function(GMat, SetName = NULL, 
+                      SubjID.step1, 
+                      kernel, 
+                      weights.beta, 
+                      impute.method, 
+                      impute.MAF.cohort, 
+                      missing_cutoff, 
+                      max_maf)
 {
   # Number of subjects and SNPs
   SetID = SetName;
@@ -302,12 +309,12 @@ Check_GMat = function(GMat, SetName = NULL, SubjID.step1, kernel, weights.beta, 
     GMat[GMat < 0.2] = 0  # mainly for the future usage of Efficient Resampling (ER)
     GMat[GMat == 9] = NA  # plink format use 9 as missing genotype
     MAF.Vec = colMeans(GMat, na.rm = T) / 2   # MAF for all markers
-    GMat = GMat[pos.Step1.In.Step2,]
+    GMat = GMat[pos.Step1.In.Step2,,drop=F]
     MAC.Vec = colSums(GMat, na.rm = T)
   }
   
   if(impute.MAF.cohort == "step1"){  # calculate MAF (for imputation) based on subjects in null model fitting
-    GMat = GMat[pos.Step1.In.Step2,] 
+    GMat = GMat[pos.Step1.In.Step2,,drop=F] 
     GMat[GMat > 1.8] = 2  # change GMat close to 0/2 to 0/2
     GMat[GMat < 0.2] = 0  # mainly for the future usage of Efficient Resampling (ER)
     GMat[GMat == 9] = NA  # plink format use 9 as missing genotype
