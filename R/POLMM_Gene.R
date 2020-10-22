@@ -216,7 +216,7 @@ check.SKAT.control = function(SKAT.control)
                               missing_cutoff = 0.15, 
                               max_maf = 0.05,
                               SPAcutoff = 2,
-                              memory.chunk = 4)
+                              memory.chunk = 2)
                               # to be continued)
   
   # use the default setting or update it

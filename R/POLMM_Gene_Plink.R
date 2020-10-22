@@ -168,9 +168,11 @@ POLMM.Gene.plink = function(objNull,
   obj.SNPSet.chunks = split.obj.SNPSet.chunks(obj.SNPSet, M.chunk)
   
   n.chunks = length(obj.SNPSet.chunks)
+  print(paste0("We split all regions to ",n.chunks," chunks!"))
   
   out_Multi_Set = c()
   for(i in 1:n.chunks){
+    print(paste0("Analyzing chunk #",i,"."))
     obj.SNPSet = obj.SNPSet.chunks[[i]]
     names.SNPSet = names(obj.SNPSet)
     nSet = length(obj.SNPSet)
@@ -231,19 +233,28 @@ split.obj.SNPSet.chunks = function(obj.SNPSet,
   for(i in 1:nSet){
     nSNPs = length(obj.SNPSet[[i]])
     
-    if(nSNPs >= M.chunk)
-      stop("One region includes more markers than the limitation from 'memory.chunk'. Check 'Details' for more information about 'memory.chunk'.")
+    if(nSNPs >= M.chunk){
+      SetName = names(obj.SNPSet)[i]
+      message = paste0("Region ", SetName, " includes ", nSNPs," markers! The maximum limits of markers in one chunk is ", M.chunk,"! ",
+                       "You can increase SKAT.control$memory.chunk to avoid this error.")
+      stop(message)
+    }
+      
     
     nSNPs.chunk = nSNPs.chunk + nSNPs
     
-    if(nSNPs.chunk >= M.chunk | i == nSet){
-      idx.chunk.end = i
+    if(nSNPs.chunk >= M.chunk){
+      idx.chunk.end = i - 1    # the last SNP in this region
       obj.SNPSet.chunks[[idx.chunk]] = obj.SNPSet[idx.chunk.start:idx.chunk.end]
-      idx.chunk.start = i + 1
+      idx.chunk.start = i      # the first SNP in the next region
       idx.chunk = idx.chunk + 1
       nSNPs.chunk = 0
     }
   }
+  
+  # the last region
+  obj.SNPSet.chunks[[idx.chunk]] = obj.SNPSet[idx.chunk.start:nSet]
+  
   return(obj.SNPSet.chunks)
 }
 
