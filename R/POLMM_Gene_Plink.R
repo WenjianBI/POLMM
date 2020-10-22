@@ -188,7 +188,9 @@ POLMM.Gene.plink = function(objNull,
     
     for(j in 1:nSet){
       SetName = names.SNPSet[j]
-      GMat1 = GMat[,obj.SNPSet[[j]]]
+      print(paste0("Analyzing marker set of ", SetName,"."))
+      print(Sys.time())
+      GMat1 = GMat[,obj.SNPSet[[j]],drop=F]
       
       GMat.list = Check_GMat(GMat1, SetName, SubjID.step1,
                              kernel = SKAT.control$kernel, 
