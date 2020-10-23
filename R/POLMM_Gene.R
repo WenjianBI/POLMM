@@ -486,21 +486,25 @@ POLMM.Gene.Main = function(GMat.list,          # output of Check_GMat()
     posG1 = which(GMat.BT[,1] != 0)
     adjGVec = OutList$adjGMat[posG1,1]
     
-    # calculate p value of Burden test from saddlepoint approximation
-    res.spa = fastSaddle_Prob(Stat, VarS, 
-                              VarW, Ratio0, 
-                              K1roots,
-                              adjGVec, muMat1[posG1,], iRMat[posG1,])
-    pval.BT = res.spa$pval
-    adjVarQ.BT = Stat^2 / qchisq(pval.BT, df = 1, lower.tail = F)
-    
-    if(adjVarQ.BT == 0 | is.na(adjVarQ.BT)){
+    if(length(posG1) < 5){       # in case of some error
       ratio = 1
     }else{
-      ratio = VarQ.BT / adjVarQ.BT
-      print(paste("ratio:",ratio))
-      print(paste("pval.BT:",pval.BT))
-      ratio = min(1, ratio)
+      # calculate p value of Burden test from saddlepoint approximation
+      res.spa = fastSaddle_Prob(Stat, VarS, 
+                                VarW, Ratio0, 
+                                K1roots,
+                                adjGVec, muMat1[posG1,], iRMat[posG1,])
+      pval.BT = res.spa$pval
+      adjVarQ.BT = Stat^2 / qchisq(pval.BT, df = 1, lower.tail = F)
+      
+      if(adjVarQ.BT == 0 | is.na(adjVarQ.BT)){
+        ratio = 1
+      }else{
+        ratio = VarQ.BT / adjVarQ.BT
+        print(paste("ratio:",ratio))
+        print(paste("pval.BT:",pval.BT))
+        ratio = min(1, ratio)
+      }
     }
     
     wadjVarSMat = wadjVarSMat / ratio
