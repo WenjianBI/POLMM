@@ -140,6 +140,21 @@ POLMM.Gene = function(objNull,
   setPOLMMGENEchr(objNull$LOCOList, 
                   chrom)
   
+  # added on 09-27-2020, sometimes setPOLMMGENEchr does not work, use the section to make it work
+  for(idx.trial in 1:100){
+    errorCHR = checkError()
+    print(errorCHR)
+    print(is.na(errorCHR))
+    if(!is.na(errorCHR)){
+      break;
+    }else{
+      print(paste("Start trial",idx.trial))
+      setPOLMMGENEchr(objNull$LOCOList, chrom)
+    }
+  }
+  if(idx.trial == 100)
+    stop("We have tried 100 times to set POLMMGENEchr but all failed!!")
+  
   out_One_Set = POLMM.Gene.Main(GMat.list,          # output of Check_GMat()
                                 NonZero_cutoff,
                                 StdStat_cutoff,
