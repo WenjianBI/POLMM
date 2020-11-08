@@ -2,169 +2,260 @@
 // [[Rcpp::depends(RcppArmadillo)]]
 #include <RcppArmadillo.h>
 
-#include <string>
-
-#include "DenseGRM.hpp"
-#include "Plink.hpp"
-#include "SubFunc.hpp"
+#include "PLINK.hpp"
 #include "POLMM.hpp"
-#include "POLMM_GENE.hpp"
+#include "util.hpp"
+#include "Main.hpp"
 
-using namespace Rcpp;
-using namespace std;
-using namespace Plink;
-using namespace DenseGRM;
-using namespace POLMM;
-using namespace POLMMGENE;
+// need to pre-define "ptr_gPLINKobj" and "ptr_gPOLMMobj"
 
-Rcpp::List getKinMatList(Rcpp::List KinMatListR)
-{
-  int nKin = KinMatListR.size();
-  Rcpp::CharacterVector NameKin = KinMatListR.names();
-  Rcpp::List KinMatList_sp;
-  for(int i = 0; i < nKin; i ++){
-    string excludeChr = string(NameKin[i]);
-    Rcpp::List KinMatTemp = KinMatListR[excludeChr];
-    arma::umat locations = KinMatTemp["locations"];
-    arma::vec values = KinMatTemp["values"];
-    int n = KinMatTemp["nSubj"];
-    // make a sparse matrix
-    arma::sp_mat KinMat(locations, values, n, n);
-    KinMatList_sp[excludeChr] = KinMat;
-  }
-  return KinMatList_sp;
-}
-
+static PLINK::PlinkClass* ptr_gPLINKobj = NULL;
+static POLMM::POLMMClass* ptr_gPOLMMobj = NULL;
 
 // [[Rcpp::export]]
-Rcpp::List fitPOLMMcpp(bool t_flagSparseGRM,       // if 1, then use SparseGRM, otherwise, use DenseGRM
-                       bool t_flagGMatRatio,       // if 1, then use GMatRatio, otherwise, extract from Plink files
-                       std::string t_bimfile,
-                       std::string t_famfile,
-                       std::string t_bedfile, 
-                       arma::ivec t_posSampleInPlink,
-                       arma::mat t_Cova,
-                       arma::Col<int> t_yVec,     // should be from 1 to J
-                       arma::vec t_beta,
-                       arma::vec t_bVec,
-                       arma::vec t_eps,           // 
-                       double t_tau,
-                       arma::mat t_GMatRatio,     // only used if m_LOCO = FALSE
-                       Rcpp::List t_SparseGRM,
-                       Rcpp::List t_controlList)
+void setPLINKobjInR(std::string t_bimFile,
+                    std::string t_famFile,
+                    std::string t_bedFile,
+                    std::vector<std::string> t_SampleInModel)
 {
-  // Plink and DenseGRM class object
-  PlinkClass PlinkObj;
-  DenseGRMClass DenseGRMObj;
+  ptr_gPLINKobj = new PLINK::PlinkClass(t_bimFile,
+                                        t_famFile,
+                                        t_bedFile,
+                                        t_SampleInModel);
   
-  Rcpp::List KinMatList;
-  if(!t_flagGMatRatio || !t_flagSparseGRM){
-    PlinkObj.setPlinkObj(t_bimfile, t_famfile, t_bedfile, t_posSampleInPlink);
-  }
-  
-  if(!t_flagSparseGRM){
-    double memoryChunk = t_controlList["memoryChunk"];
-    double minMafGRM = t_controlList["minMafGRM"];
-    double maxMissingGRM = t_controlList["maxMissingGRM"];
-    DenseGRMObj.setDenseGRMObj(&PlinkObj, memoryChunk, minMafGRM, maxMissingGRM);
-  }else{
-    KinMatList = getKinMatList(t_SparseGRM);
-  }
-  
-  // POLMM class object
-  POLMMClass POLMMObj;
-  POLMMObj.setPOLMMObj(t_flagSparseGRM,       // if 1, then use SparseGRM, otherwise, use DenseGRM
-                       t_flagGMatRatio,       // if 1, then use GMatRatio, otherwise, extract from Plink files
-                       &PlinkObj,
-                       &DenseGRMObj,
-                       t_Cova,
-                       t_yVec,     // should be from 1 to J
-                       t_beta,
-                       t_bVec,
-                       t_eps,           // 
-                       t_tau,
-                       t_GMatRatio,     // only used if m_LOCO = FALSE
-                       KinMatList,
-                       t_controlList);
-  
-  // Null model fitting
-  if(!t_controlList["onlyCheckTime"])
-    POLMMObj.fitPOLMM();
-  
-  Rcpp::List outList = POLMMObj.getPOLMM();
-  
-  POLMMObj.closeGenoObj();
-  
-  return(outList);
+  int n = ptr_gPLINKobj->getN();
+  std::cout << "n:\t" << n << std::endl;
 }
 
-// make a global variable for region- and Gene-based association test
-static POLMMGENEClass* ptr_POLMMGENEobj = NULL;
-
 // [[Rcpp::export]]
-void setPOLMMGENEobj(int t_maxiterPCG,
-                     double t_tolPCG,
-                     arma::mat t_Cova,
-                     arma::uvec t_yVec,     // should be from 1 to J
-                     double t_tau,
-                     Rcpp::List t_SparseGRM,    // results of function getKinMatList()
-                     Rcpp::List t_LOCOList,
-                     arma::vec t_eta,
-                     int t_nMaxNonZero)
+void setPOLMMobjInR(arma::mat t_muMat,
+                    arma::mat t_iRMat,
+                    arma::mat t_Cova,
+                    arma::vec t_yVec,
+                    Rcpp::List t_SPmatR,    // output of makeSPmatR()
+                    double t_tau,
+                    bool t_printPCGInfo,
+                    double t_tolPCG,
+                    int t_maxiterPCG)
 {
-  Rcpp::List KinMatList = getKinMatList(t_SparseGRM);
-  
-  ptr_POLMMGENEobj = new POLMMGENEClass(t_maxiterPCG, 
-                                        t_tolPCG,
+  arma::umat locations = t_SPmatR["locations"];
+  arma::vec values = t_SPmatR["values"];
+  arma::sp_mat SparseGRM = arma::sp_mat(locations, values);
+  ptr_gPOLMMobj = new POLMM::POLMMClass(t_muMat,
+                                        t_iRMat,
                                         t_Cova,
                                         t_yVec,
+                                        SparseGRM,
                                         t_tau,
-                                        KinMatList,
-                                        t_LOCOList,
-                                        t_eta,
-                                        t_nMaxNonZero);
+                                        t_printPCGInfo,
+                                        t_tolPCG,
+                                        t_maxiterPCG);
 }
 
 // [[Rcpp::export]]
-void closePOLMMGENEobj()
-{
-  delete ptr_POLMMGENEobj;
-}
-
-// [[Rcpp::export]]
-void setPOLMMGENEchr(Rcpp::List t_LOCOList, std::string t_excludechr)
-{
-  ptr_POLMMGENEobj->setPOLMMGENEchr(t_LOCOList, t_excludechr);
-}
-
-// [[Rcpp::export]]
-Rcpp::List getStatVarS(arma::mat t_GMat,
+Rcpp::List MAIN_REGION(std::vector<std::string> t_MarkerReqstd,
                        double t_NonZero_cutoff,
-                       double t_StdStat_cutoff)
+                       double t_StdStat_cutoff,
+                       int t_maxMarkers,
+                       std::string t_outputFile,
+                       double t_missingRate_cutoff,
+                       double t_maxMAF_cutoff)
 {
-  Rcpp::List OutList = ptr_POLMMGENEobj->getStatVarS(t_GMat,
-                                                     t_NonZero_cutoff,
-                                                     t_StdStat_cutoff);
-  return(OutList);
+  // extract information from global variable ptr_gPLINKobj
+  int n = ptr_gPLINKobj->getN();
+  std::vector<uint32_t> posMarkerInPlink = ptr_gPLINKobj->getPosMarkerInPlink(t_MarkerReqstd);
+  int q = posMarkerInPlink.size();         // number of markers in the region
+  
+  // set up output
+  std::vector<std::string> a1Vec; 
+  std::vector<std::string> a2Vec; 
+  std::vector<std::string> markerVec;
+  std::vector<uint32_t> pdVec;
+  std::vector<double> freqVec; 
+  std::vector<double> StatVec;
+  std::vector<bool> flipVec;
+  arma::fmat VarSMat;
+  
+  //
+  arma::fmat adjGMat(n, t_maxMarkers);       // adjusted genotype vector 
+  arma::fmat ZPZ_adjGMat(n, t_maxMarkers);   // t(Z) %*% P %*% Z %*% adjGMat
+  
+  int indexPassingQC = 0;
+  int indexChunkSave = 0;
+  
+  // loop for all markers
+  for(int i = 0; i < q; i++){
+
+    uint32_t posMarker = posMarkerInPlink.at(i);
+    double freq, missingRate;
+    std::vector<uint32_t> posMissingGeno;
+    std::string a1, a2, marker;
+    uint32_t pd;
+    uint8_t chr;
+    bool flip = false;
+    bool flagTrueGeno = true;
+
+    arma::vec GVec = ptr_gPLINKobj->getOneMarker(posMarker, freq, missingRate, posMissingGeno,
+                                                 a1, a2, marker, pd, chr, flagTrueGeno);
+    double MAF = std::min(freq, 1 - freq);
+
+    // Quality Control (QC) based on missing rate and allele frequency
+    if(missingRate > t_missingRate_cutoff || MAF > t_maxMAF_cutoff)
+      continue;
+
+    // push back to output
+    a1Vec.push_back(a1);
+    a2Vec.push_back(a2);
+    markerVec.push_back(marker);
+    pdVec.push_back(pd);
+
+    if(missingRate != 0)
+      imputeGeno(GVec, freq, posMissingGeno);
+
+    if(freq > 0.5){
+      GVec = 2 - GVec;
+      flip = true;
+    }
+
+    freqVec.push_back(MAF);
+    flipVec.push_back(flip);
+
+    arma::vec adjGVec = ptr_gPOLMMobj->getadjGFast(GVec);
+    
+    double Stat = ptr_gPOLMMobj->getStatFast(adjGVec);
+    
+    StatVec.push_back(Stat);
+
+    // get t(Z) %*% P %*% Z %*% adjGVec for each marker
+    arma::vec ZPZ_adjGVec = ptr_gPOLMMobj->get_ZPZ_adjGVec(adjGVec);
+    
+    double VarS = as_scalar(adjGVec.t() * ZPZ_adjGVec);
+
+    double StdStat = std::abs(Stat) / sqrt(VarS);
+
+    if(StdStat > t_StdStat_cutoff){ // then use SPA/ER to correct p value
+      // functions of SPA or ER
+    }
+
+    // insert adjGVec and ZPZ_adjGVec into a pre-defined matrix
+    adjGMat.col(indexPassingQC) = arma::conv_to<arma::fvec>::from(adjGVec);
+    ZPZ_adjGMat.col(indexPassingQC) = arma::conv_to<arma::fvec>::from(ZPZ_adjGVec);
+
+    indexPassingQC++;
+    
+    if(indexPassingQC % t_maxMarkers == 0){
+      adjGMat.save(t_outputFile + "_adjGMat" + std::to_string(indexChunkSave) + ".bin");
+      ZPZ_adjGMat.save(t_outputFile + "_ZPZ_adjGMat" + std::to_string(indexChunkSave) + ".bin");
+      indexPassingQC = 0;
+      indexChunkSave++;
+    }
+  }
+
+  // the region includes more markers than memory requested
+  int LastChunkSave = 0;
+  if((indexChunkSave > 0) & (indexPassingQC != 0)){ 
+    adjGMat = adjGMat.cols(0, indexPassingQC - 1);
+    ZPZ_adjGMat = ZPZ_adjGMat.cols(0, indexPassingQC - 1);
+    adjGMat.save(t_outputFile + "_adjGMat" + std::to_string(indexChunkSave) + ".bin");
+    ZPZ_adjGMat.save(t_outputFile + "_ZPZ_adjGMat" + std::to_string(indexChunkSave) + ".bin");
+    indexChunkSave++;
+    LastChunkSave = 1;
+  }
+  
+  indexPassingQC = indexPassingQC + (indexChunkSave - LastChunkSave) * t_maxMarkers;
+  
+  // calculate variance-covariance matrix
+  VarSMat.resize(indexPassingQC, indexPassingQC);    // variance matrix (after adjusting for relatedness)
+  
+  // not so many markers in the region, so everything is in memory
+  if(indexChunkSave == 0)
+  {
+    VarSMat = getSymmMat(adjGMat, ZPZ_adjGMat, indexPassingQC);
+  }
+  
+  // the region includes more markers than limitation, so everything is in hard-drive storage
+  if(indexChunkSave > 0)
+  {
+    int first_row = 0;
+    int first_col = 0;
+    int last_row = t_maxMarkers - 1;
+    int last_col = t_maxMarkers - 1;
+    
+    for(int index1 = 0; index1 < indexChunkSave; index1++)
+    {
+      adjGMat.load(t_outputFile + "_adjGMat" + std::to_string(index1) + ".bin");
+      
+      // off-diagonal sub-matrix
+      for(int index2 = 0; index2 < index1; index2++)
+      {
+        ZPZ_adjGMat.load(t_outputFile + "_ZPZ_adjGMat" + std::to_string(index2) + ".bin");
+
+        arma::fmat offVarSMat = getfmatMulti(adjGMat, ZPZ_adjGMat);
+        VarSMat.submat(first_row, first_col, std::min(last_row, indexPassingQC - 1), std::min(last_col, indexPassingQC - 1)) = offVarSMat;
+        VarSMat.submat(first_col, first_row, std::min(last_col, indexPassingQC - 1), std::min(last_row, indexPassingQC - 1)) = offVarSMat.t();
+        first_col += t_maxMarkers;
+        last_col += t_maxMarkers;
+      }
+
+      // // diagonal sub-matrix
+      ZPZ_adjGMat.load(t_outputFile + "_ZPZ_adjGMat" + std::to_string(index1) + ".bin");
+      arma::fmat diagVarSMat = getSymmMat(adjGMat, ZPZ_adjGMat, adjGMat.n_cols);
+      VarSMat.submat(first_row, first_col, std::min(last_row, indexPassingQC - 1), std::min(last_col, indexPassingQC - 1)) = diagVarSMat;
+      first_row += t_maxMarkers;
+      last_row += t_maxMarkers;
+      first_col = 0;
+      last_col = t_maxMarkers - 1;
+    }
+  }
+  
+  Rcpp::List OutList = Rcpp::List::create(Rcpp::Named("StatVec") = StatVec,
+                                          Rcpp::Named("VarSMat") = VarSMat,
+                                          Rcpp::Named("markerVec") = markerVec,
+                                          Rcpp::Named("freqVec") = freqVec,
+                                          Rcpp::Named("a1Vec") = a1Vec,
+                                          Rcpp::Named("a2Vec") = a2Vec,
+                                          Rcpp::Named("pdVec") = pdVec,
+                                          Rcpp::Named("flipVec") = flipVec);
+  return OutList;
 }
 
-// [[Rcpp::export]]
-double getPvalERtoR(arma::vec t_GVec)
+// yMat = t(xMat1) * xMat2; 
+// if yMat is a symmetric matrix, we only need to calculate its lower triangular part
+arma::fmat getSymmMat(arma::fmat& xMat1,  // n x p
+                      arma::fmat& xMat2,  // n x p
+                      int p)
 {
-  double PvalER = ptr_POLMMGENEobj->getPvalERinClass(t_GVec);
-  return PvalER;
+  int p1 = xMat1.n_cols;
+  if(p > p1){
+    Rcpp::stop("check function getSymmMat() in Main.cpp.");
+  }
+  arma::fmat yMat(p, p);
+  for(int i = 0; i < p; i++){
+    arma::fvec xVec1 = xMat1.col(i);
+    for(int j = 0; j < i; j++){
+      float cov = as_scalar(xVec1.t() * xMat2.col(j));
+      yMat(i, j) = yMat(j, i) = cov;
+    }
+    float var = as_scalar(xMat1.col(i).t() * xMat2.col(i));
+    yMat(i, i) = var;
+  }
+  return yMat;
 }
 
-// [[Rcpp::export]]
-void check_ZPZ_adjGVec(arma::vec t_adjGVec)
+// yMat = t(xMat1) * xMat2; 
+// even if yMat is a nonsymmetric matrix, if xMat1 and xMat2 is arma::fmat, sometimes the direct matrix multiplication cannot be used
+arma::fmat getfmatMulti(arma::fmat& xMat1,  // n x p1
+                        arma::fmat& xMat2)  // n x p2
 {
-  ptr_POLMMGENEobj->check_ZPZ_adjGVec(t_adjGVec);
+  int p1 = xMat1.n_cols;
+  int p2 = xMat2.n_cols;
+  arma::fmat yMat(p1, p2);
+  for(int i = 0; i < p1; i++){
+    arma::fvec xVec1 = xMat1.col(i);
+    for(int j = 0; j < p2; j++){
+      float value = as_scalar(xVec1.t() * xMat2.col(j));
+      yMat(i, j) = value;
+    }
+  }
+  return yMat;
 }
-
-// [[Rcpp::export]]
-double checkError()
-{
-  double errorCHR = ptr_POLMMGENEobj->checkError();
-  return errorCHR;
-}
-

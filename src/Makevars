@@ -8,10 +8,7 @@
 ##
 ## And with R 3.4.0, and RcppArmadillo 0.7.960.*, we turn C++11 on as OpenMP
 ## support within Armadillo prefers / requires it
-PKG_CPPFLAGS = -D SQLITE_ENABLE_COLUMN_METADATA -O3 -fpic -Wall -Wextra -pedantic  -DARMA_64BIT_WORD=1
 CXX_STD = CXX11
 
 PKG_CXXFLAGS = $(SHLIB_OPENMP_CXXFLAGS) 
-## PKG_LIBS = $(SHLIB_OPENMP_CXXFLAGS) $(LAPACK_LIBS) $(BLAS_LIBS) $(FLIBS) -lsuperlu
 PKG_LIBS = $(SHLIB_OPENMP_CXXFLAGS) $(LAPACK_LIBS) $(BLAS_LIBS) $(FLIBS)
-PKG_LIBS += $(shell ${R_HOME}/bin/Rscript -e "RcppParallel::RcppParallelLibs()")
