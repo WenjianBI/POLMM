@@ -334,6 +334,7 @@ Check_GMat = function(GMat, SetName = NULL, SubjID.step1, kernel, weights.beta, 
   }
   
   GMat = GMat[,pos.PassG,drop=F]
+  SNPsID = colnames(GMat)
   MAF.Vec = MAF.Vec[pos.PassG]
   AlleleFlip.Vec = AlleleFlip.Vec[pos.PassG]
   MissingRate.Vec = MissingRate.Vec[pos.PassG]
