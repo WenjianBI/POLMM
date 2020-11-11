@@ -177,7 +177,7 @@ arma::vec PlinkClass::getOneMarker(unsigned long long int t_posMarker,
     case HOM_REF: break;
     case HET: sum+=1; break;
     case HOM_ALT: sum+=2; break;
-    case MISSING: numMissing++; break;  
+    case MISSING: numMissing++; t_posMissingGeno.push_back(i); break;  
     }
     // OneMarkerG1[i] = bufferG1;
     if(t_flagTrueGeno){

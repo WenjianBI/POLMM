@@ -106,7 +106,7 @@ Rcpp::List MAIN_REGION(std::vector<std::string> t_MarkerReqstd,
     double MAF = std::min(freq, 1 - freq);
 
     // Quality Control (QC) based on missing rate and allele frequency
-    if(missingRate > t_missingRate_cutoff || MAF > t_maxMAF_cutoff)
+    if((missingRate > t_missingRate_cutoff) || (MAF > t_maxMAF_cutoff) || (MAF == 0))
       continue;
 
     // push back to output

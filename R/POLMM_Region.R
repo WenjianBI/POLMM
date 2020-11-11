@@ -177,7 +177,9 @@ POLMM.Region = function(objNull,
      
     
     OUT.Region = rbind(OUT.Region,
-                       c(Region, length(OutList$markerVec), Pvalue, 
+                       c(Region, 
+                         length(OutList$markerVec), 
+                         Pvalue, 
                          paste(OutList$markerVec, collapse = ","),
                          paste(OutList$freqVec, collapse = ","),
                          paste(OutList$flipVec, collapse = ","),
