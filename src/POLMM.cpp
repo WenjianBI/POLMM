@@ -5,7 +5,6 @@
 #include "POLMM.hpp"
 #include "util.hpp"
 
-
 namespace POLMM {
 
 POLMMClass::POLMMClass(arma::mat t_muMat,

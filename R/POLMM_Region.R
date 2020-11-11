@@ -137,9 +137,8 @@ POLMM.Region = function(objNull,
                           POLMM.control$missing_cutoff,
                           POLMM.control$max_maf_region)
     
-    adjPVec = OutList$StatVec / diag(OutList$VarSMat)
-    
-    StdStatVec = OutList$StatVec / sqrt(diag(OutList$VarSMat))
+    VarSVec = diag(OutList$VarSMat)
+    StdStatVec = OutList$StatVec / sqrt(VarSVec)
     QVec = StdStatVec^2
     adjPVec = PVec = pchisq(QVec, lower.tail = FALSE, df = 1)
     
@@ -154,7 +153,7 @@ POLMM.Region = function(objNull,
     
     out_SKAT_List = try(SKAT:::Met_SKAT_Get_Pvalue(Score = wStatVec, 
                                                    Phi = wadjVarSMat,
-                                                   r.corr = POLMM.control$r.all, 
+                                                   r.corr = POLMM.control$r.corr, 
                                                    method = "optimal.adj", 
                                                    Score.Resampling = NULL),
                         silent = TRUE)
@@ -182,6 +181,8 @@ POLMM.Region = function(objNull,
                          paste(OutList$markerVec, collapse = ","),
                          paste(OutList$freqVec, collapse = ","),
                          paste(OutList$flipVec, collapse = ","),
+                         paste(OutList$StatVec, collapse = ","),
+                         paste(VarSVec, collapse = ","),
                          paste(adjPVec, collapse = ",")))
   }
   

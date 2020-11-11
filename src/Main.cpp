@@ -40,6 +40,7 @@ void setPOLMMobjInR(arma::mat t_muMat,
 {
   arma::umat locations = t_SPmatR["locations"];
   arma::vec values = t_SPmatR["values"];
+  std::cout << "Setting Sparse GRM...." << std::endl;
   arma::sp_mat SparseGRM = arma::sp_mat(locations, values);
   ptr_gPOLMMobj = new POLMM::POLMMClass(t_muMat,
                                         t_iRMat,
@@ -167,7 +168,6 @@ Rcpp::List MAIN_REGION(std::vector<std::string> t_MarkerReqstd,
     std::cout << "Completed chunk "<< indexChunkSave << "!" << std::endl;
     indexChunkSave++;
   }
-  
   
   // calculate variance-covariance matrix
   VarSMat.resize(nPassingQC, nPassingQC);    // variance matrix (after adjusting for relatedness)
