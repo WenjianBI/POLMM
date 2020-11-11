@@ -527,7 +527,9 @@ POLMM.Gene.Main = function(GMat.list,          # output of Check_GMat()
                   paste(MAF.Vec, collapse = ","),
                   paste(AlleleFlip.Vec, collapse = ","),
                   paste(betaVec, collapse = ","),
-                  paste(adjPVec, collapse = ","))
+                  paste(adjPVec, collapse = ","),
+                 paste(StatVec, collapse = ","),
+                 paste(VarSVec, collapse = ","))
   
   
   return(out_One_Set)
