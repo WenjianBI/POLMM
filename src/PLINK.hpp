@@ -23,7 +23,7 @@ private:
   // information from fam file
   std::vector<std::string> m_SampleInPlink;
   uint32_t m_N0, m_N;
-  uint32_t m_numBytesofEachMarker0, m_numBytesofEachMarker;
+  unsigned long long int m_numBytesofEachMarker0, m_numBytesofEachMarker;
   
   // input file stream of .bed file
   std::ifstream m_ibedFile;
@@ -70,7 +70,7 @@ public:
   std::vector<uint32_t> getPosMarkerInPlink(std::vector<std::string> t_MarkerReqstd);
   
   // get genotype of one marker (and frequency and missing rate)
-  arma::vec getOneMarker(uint32_t t_posMarker, 
+  arma::vec getOneMarker(unsigned long long int t_posMarker, 
                          double& t_freq, 
                          double& t_missingRate,
                          std::vector<uint32_t>& t_posMissingGeno,

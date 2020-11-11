@@ -142,7 +142,7 @@ std::vector<uint32_t> PlinkClass::getPosMarkerInPlink(std::vector<std::string> t
   return posMarkerInPlink;
 }
 
-arma::vec PlinkClass::getOneMarker(uint32_t t_posMarker, 
+arma::vec PlinkClass::getOneMarker(unsigned long long int t_posMarker, 
                                    double& t_freq, 
                                    double& t_missingRate,
                                    std::vector<uint32_t>& t_posMissingGeno,
@@ -157,7 +157,8 @@ arma::vec PlinkClass::getOneMarker(uint32_t t_posMarker,
   int numMissing = 0;
   arma::vec OneMarkerG1(m_N);
   
-  m_ibedFile.seekg(3 + m_numBytesofEachMarker0 * t_posMarker);
+  unsigned long long int posSeek = 3 + m_numBytesofEachMarker0 * t_posMarker;
+  m_ibedFile.seekg(posSeek);
   m_ibedFile.read((char*)(&m_OneMarkerG4[0]), m_numBytesofEachMarker0);
   
   t_posMissingGeno.clear();

@@ -151,6 +151,7 @@ Rcpp::List MAIN_REGION(std::vector<std::string> t_MarkerReqstd,
       std::cout << "Completed chunk "<< indexChunkSave << "!" << std::endl;
       indexChunkSave++;
     }
+    Rcpp::checkUserInterrupt();
   }
 
   // total number of markers that pass QC from MAF and missing rate
@@ -219,6 +220,7 @@ Rcpp::List MAIN_REGION(std::vector<std::string> t_MarkerReqstd,
       last_row += t_maxMarkers;
       first_col = 0;
       last_col = t_maxMarkers - 1;
+      Rcpp::checkUserInterrupt();
     }
   }
   
