@@ -298,9 +298,9 @@ Check_GMat = function(GMat, SetName = NULL, SubjID.step1, kernel, weights.beta, 
     stop("All subjects in step 1 (fitting the null model) should be in step 2 (association testing).")
   
   if(impute.MAF.cohort == "step2"){  # calculate MAF (for imputation) based on all subjects with genotypes
+    GMat[GMat == -9] = NA  # plink format use -9 as missing genotype
     GMat[GMat > 1.8] = 2  # change GMat close to 0/2 to 0/2
     GMat[GMat < 0.2] = 0  # mainly for the future usage of Efficient Resampling (ER)
-    GMat[GMat == -9] = NA  # plink format use -9 as missing genotype
     MAF.Vec = colMeans(GMat, na.rm = T) / 2   # MAF for all markers
     GMat = GMat[pos.Step1.In.Step2,]
     MAC.Vec = colSums(GMat, na.rm = T)
@@ -308,9 +308,9 @@ Check_GMat = function(GMat, SetName = NULL, SubjID.step1, kernel, weights.beta, 
   
   if(impute.MAF.cohort == "step1"){  # calculate MAF (for imputation) based on subjects in null model fitting
     GMat = GMat[pos.Step1.In.Step2,] 
+    GMat[GMat == -9] = NA  # plink format use -9 as missing genotype
     GMat[GMat > 1.8] = 2  # change GMat close to 0/2 to 0/2
     GMat[GMat < 0.2] = 0  # mainly for the future usage of Efficient Resampling (ER)
-    GMat[GMat == -9] = NA  # plink format use -9 as missing genotype
     MAF.Vec = colMeans(GMat, na.rm = T) / 2   # MAF for all markers
     MAC.Vec = MAF.Vec * 2 * nrow(GMat)
   }
