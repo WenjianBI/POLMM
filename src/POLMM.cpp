@@ -315,7 +315,7 @@ arma::vec K12(double t_x,
   arma::vec yVec(2);
   yVec(0) = sum(temp2Vec / temp1Vec) - t_m1;
   // yMat[i,2] = sum((temp3Vec*temp1Vec-temp2Vec^2)/temp1Vec^2, na.rm=TRUE);
-  yVec(1) = sum((temp3Vec % temp1Vec - pow(temp2Vec,2)) / pow(temp1Vec,2));
+  yVec(1) = sum((temp3Vec % temp1Vec - pow(temp2Vec, 2)) / pow(temp1Vec, 2));
   
   return yVec;
 }
@@ -349,7 +349,7 @@ Rcpp::List fastgetroot_K1(double t_Stat,
     K2 = K12Vec(1) + t_Ratio0;
     
     diffX = -1 * K1 / K2;
-    if(std::isfinite(K1)){
+    if(!std::isfinite(K1)){
       // checked it on 07/05:
       // if the solution 'x' tends to infinity, 'K2' tends to 0, and 'K1' tends to 0 very slowly.
       // then we can set the one sided p value as 0 (instead of setting converge = F)
