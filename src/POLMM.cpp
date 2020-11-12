@@ -250,7 +250,6 @@ arma::mat POLMMClass::solverBlockDiagSigma(arma::mat& t_xMat)     // n x (J-1)
 }
 
 Rcpp::List POLMMClass::MAIN_SPA(double t_Stat,
-                                arma::vec t_GVec,
                                 arma::vec t_adjGVec,
                                 arma::vec t_K1roots,
                                 double t_VarP,
@@ -343,12 +342,15 @@ Rcpp::List fastgetroot_K1(double t_Stat,
     
     arma::vec K12Vec = K12(x, t_muMat, t_cMat, t_m1);
     
-    std::cout << "K12Vec:\t" << K12Vec << std::endl;
-    
     K1 = K12Vec(0) - t_Stat + t_Ratio0 * x;
     K2 = K12Vec(1) + t_Ratio0;
     
     diffX = -1 * K1 / K2;
+    
+    std::cout << "K1:\t" << K1 << std::endl;
+    std::cout << "K2:\t" << K2 << std::endl;
+    std::cout << "diffX:\t" << diffX << std::endl;
+    
     if(!std::isfinite(K1)){
       // checked it on 07/05:
       // if the solution 'x' tends to infinity, 'K2' tends to 0, and 'K1' tends to 0 very slowly.
@@ -428,11 +430,6 @@ Rcpp::List fastSaddle_Prob(double t_Stat,
   }
   
   double m1 = arma::accu(t_muMat1 % cMat);
-  
-  std::cout << "std::abs(adjStat):\t" << std::abs(adjStat) << std::endl;
-  std::cout << "std::min(t_K1roots(0), 5.0):\t" << std::min(t_K1roots(0), 5.0) << std::endl;
-  std::cout << "t_Ratio0:\t" << t_Ratio0 << std::endl;
-  std::cout << "m1:\t" << m1 << std::endl;
   
   Rcpp::List outUni1 = fastgetroot_K1(std::abs(adjStat), std::min(t_K1roots(0), 5.0), 
                                       t_Ratio0, t_muMat1, cMat, m1);

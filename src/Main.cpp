@@ -147,7 +147,7 @@ Rcpp::List MAIN_REGION(std::vector<std::string> t_MarkerReqstd,
         double Ratio0 = VarW0 / VarW;
         
         arma::vec K1roots(2, arma::fill::zeros);
-        Rcpp::List resSPA = ptr_gPOLMMobj->MAIN_SPA(Stat, GVec, adjGVec, K1roots, VarS, VarW, Ratio0, posG1);
+        Rcpp::List resSPA = ptr_gPOLMMobj->MAIN_SPA(Stat, adjGVec, K1roots, VarS, VarW, Ratio0, posG1);
         
         double pval = resSPA["pval"];
         std::cout << pval << std::endl;

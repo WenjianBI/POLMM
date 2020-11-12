@@ -75,7 +75,6 @@ public:
   arma::vec getVarWVec(arma::vec adjGVec);
   
   Rcpp::List MAIN_SPA(double t_Stat,
-                      arma::vec t_GVec,
                       arma::vec t_adjGVec,
                       arma::vec t_K1roots,
                       double t_VarP,
