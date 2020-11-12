@@ -313,9 +313,9 @@ arma::vec K12(double t_x,
   arma::vec temp3Vec = arma::sum(temp3Mat, 1);
   
   arma::vec yVec(2);
-  yVec(1) = sum(temp2Vec / temp1Vec) - t_m1;
+  yVec(0) = sum(temp2Vec / temp1Vec) - t_m1;
   // yMat[i,2] = sum((temp3Vec*temp1Vec-temp2Vec^2)/temp1Vec^2, na.rm=TRUE);
-  yVec(2) = sum((temp3Vec * temp1Vec - pow(temp2Vec,2)) / pow(temp1Vec,2));
+  yVec(1) = sum((temp3Vec % temp1Vec - pow(temp2Vec,2)) / pow(temp1Vec,2));
   
   return yVec;
 }
@@ -342,8 +342,8 @@ Rcpp::List fastgetroot_K1(double t_Stat,
     double oldK1 = K1;
     
     arma::vec K12Vec = K12(x, t_muMat, t_cMat, t_m1);
-    K1 = K12Vec(1) - t_Stat + t_Ratio0 * x;
-    K2 = K12Vec(2) + t_Ratio0;
+    K1 = K12Vec(0) - t_Stat + t_Ratio0 * x;
+    K2 = K12Vec(1) + t_Ratio0;
     
     diffX = -1 * K1 / K2;
     if(std::isfinite(K1)){
