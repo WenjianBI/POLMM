@@ -151,7 +151,7 @@ Rcpp::List MAIN_REGION(std::vector<std::string> t_MarkerReqstd,
         
         // double pval = resSPA["pval"];
         // std::cout << pval << std::endl;
-        std::cout << resSPA << std::endl;
+        // std::cout << resSPA << std::endl;
         std::cout << 2 * arma::normcdf(-1*StdStat) << std::endl;
         
       // }else{
