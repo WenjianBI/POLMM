@@ -425,7 +425,7 @@ Rcpp::List fastSaddle_Prob(double t_Stat,
   arma::mat cMat(N1, J-1);
   for(int i = 0; i < N1; i ++){
     for(int j = 0; j < J-1; j ++){
-      cMat(i,j) = t_adjGVec1(i) * t_iRMat1(i,j) / sqrtVarW;
+      cMat(i,j) = t_adjGVec1(i) / t_iRMat1(i,j) / sqrtVarW;
     }
   }
   
