@@ -451,8 +451,8 @@ Rcpp::List fastSaddle_Prob(double t_Stat,
     double p2 = fastGet_Saddle_Prob(-1 * std::abs(adjStat), outUni2["root"], 
                                     outUni2["K2"], t_Ratio0, t_muMat1, cMat, m1, false);
     
-    double root = outUni2["root"];
-    double K2 = outUni2["K2"];
+    root = outUni2["root"];
+    K2 = outUni2["K2"];
     std::cout << "outUni2:\t" << root << "\t" << K2 << std::endl;
     std::cout << "p2:\t" << p2 << std::endl;
     
