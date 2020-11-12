@@ -408,12 +408,13 @@ Rcpp::List fastSaddle_Prob(double t_Stat,
                            double t_Ratio0,      // Ratio of variance (G==0)
                            arma::vec t_K1roots,  // 2 x 1
                            arma::vec t_adjGVec1, // N1 x 1, where N1 is length(G!=0)
-                           arma::mat t_muMat1,   // N1 x (J-1)
+                           arma::mat t_muMat1,   // N1 x J
                            arma::mat t_iRMat1)   // N1 x (J-1)
 {
+  int J = t_muMat1.N_cols;
+  t_muMat1 = t_muMat1.cols(0, J-2);
   double adjStat = t_Stat / sqrt(t_VarP);
   int N1 = t_muMat1.n_rows;
-  int J = t_muMat1.n_cols + 1;
   
   double sqrtVarW = sqrt(t_VarW);
   
