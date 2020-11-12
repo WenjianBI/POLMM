@@ -149,8 +149,8 @@ Rcpp::List MAIN_REGION(std::vector<std::string> t_MarkerReqstd,
         arma::vec K1roots(2, arma::fill::zeros);
         Rcpp::List resSPA = ptr_gPOLMMobj->MAIN_SPA(Stat, GVec, adjGVec, K1roots, VarS, VarW, Ratio0, posG1);
         
-        // double pval = resSPA["pval"];
-        // std::cout << pval << std::endl;
+        double pval = resSPA["pval"];
+        std::cout << pval << std::endl;
         // std::cout << resSPA << std::endl;
         std::cout << 2 * arma::normcdf(-1*StdStat) << std::endl;
         

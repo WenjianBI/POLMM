@@ -425,7 +425,7 @@ Rcpp::List fastSaddle_Prob(double t_Stat,
     }
   }
   
-  double m1 = arma::accu(t_muMat1 * cMat);
+  double m1 = arma::accu(t_muMat1 % cMat);
   
   Rcpp::List outUni1 = fastgetroot_K1(std::abs(adjStat), std::min(t_K1roots(0), 5.0), 
                                       t_Ratio0, t_muMat1, cMat, m1);
