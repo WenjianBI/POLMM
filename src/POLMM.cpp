@@ -342,6 +342,9 @@ Rcpp::List fastgetroot_K1(double t_Stat,
     double oldK1 = K1;
     
     arma::vec K12Vec = K12(x, t_muMat, t_cMat, t_m1);
+    
+    std::cout << "K12Vec:\t" << K12Vec << std::endl;
+    
     K1 = K12Vec(0) - t_Stat + t_Ratio0 * x;
     K2 = K12Vec(1) + t_Ratio0;
     
