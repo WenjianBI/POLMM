@@ -7,7 +7,16 @@ void imputeGeno(arma::vec& GVec,
                 std::vector<uint32_t> posMissingGeno)
 {
   int n = posMissingGeno.size();
+  
+  // should be updated later
   double imputeG = 2 * freq;
+  if(freq < 0.05){
+    imputeG = 0;
+  }
+  if(freq > 0.95){
+    imputeG = 2;
+  }
+  
   for(int i = 0; i < n; i++){
     uint32_t posMissing = posMissingGeno.at(i);
     GVec.at(posMissing) = imputeG;

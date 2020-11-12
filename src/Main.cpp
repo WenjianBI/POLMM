@@ -136,6 +136,27 @@ Rcpp::List MAIN_REGION(std::vector<std::string> t_MarkerReqstd,
     double StdStat = std::abs(Stat) / sqrt(VarS);
     if(StdStat > t_StdStat_cutoff){ // then use SPA/ER to correct p value
       // functions of SPA or ER
+      arma::uvec posG1 = arma::find(GVec != 0);
+      // int nG1 = posG1.size();
+      
+      // if(nG1 > t_NonZero_cutoff){
+        arma::vec VarWVec = ptr_gPOLMMobj->getVarWVec(adjGVec);
+        double VarW = sum(VarWVec);
+        double VarW1 = sum(VarWVec(posG1));
+        double VarW0 = VarW - VarW1;
+        double Ratio0 = VarW0 / VarW;
+        
+        arma::vec K1roots(2, arma::fill::zeros);
+        Rcpp::List resSPA = ptr_gPOLMMobj->MAIN_SPA(Stat, GVec, adjGVec, K1roots, VarS, VarW, Ratio0, posG1);
+        
+        double pval = resSPA["pval"];
+        std::cout << pval << std::endl;
+        std::cout << 2 * arma::normcdf(-1*StdStat) << std::endl;
+        
+      // }else{
+        // something to add for Efficient Resampling (ER)
+      //  Rcpp::List resSPA = ptr_gPOLMMobj->MAIN_SPA(Stat, GVec, adjGVec, K1roots, VarP, VarW, Ratio0, posG1);
+      // }
     }
 
     // insert adjGVec and ZPZ_adjGVec into a pre-defined matrix
