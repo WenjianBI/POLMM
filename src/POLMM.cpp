@@ -411,7 +411,7 @@ Rcpp::List fastSaddle_Prob(double t_Stat,
                            arma::mat t_muMat1,   // N1 x J
                            arma::mat t_iRMat1)   // N1 x (J-1)
 {
-  int J = t_muMat1.N_cols;
+  int J = t_muMat1.n_cols;
   t_muMat1 = t_muMat1.cols(0, J-2);
   double adjStat = t_Stat / sqrt(t_VarP);
   int N1 = t_muMat1.n_rows;
@@ -427,9 +427,9 @@ Rcpp::List fastSaddle_Prob(double t_Stat,
   
   double m1 = arma::accu(t_muMat1 * cMat);
   
-  Rcpp::List outUni1 = fastgetroot_K1(std::abs(adjStat), std::min(t_K1roots[1], 5.0), 
+  Rcpp::List outUni1 = fastgetroot_K1(std::abs(adjStat), std::min(t_K1roots(0), 5.0), 
                                       t_Ratio0, t_muMat1, cMat, m1);
-  Rcpp::List outUni2 = fastgetroot_K1(-1 * std::abs(adjStat), std::max(t_K1roots[2], -5.0), 
+  Rcpp::List outUni2 = fastgetroot_K1(-1 * std::abs(adjStat), std::max(t_K1roots(1), -5.0), 
                                       t_Ratio0, t_muMat1, cMat, m1);
   
   bool converge = false;
@@ -452,13 +452,13 @@ Rcpp::List fastSaddle_Prob(double t_Stat,
     converge = true;
     K1roots = {outUni1["root"], outUni2["root"]};
   }else{
-    Rprintf("SPA does not converge, use normal approximation p value.");
+    std::cout << "SPA does not converge, use normal approximation p value." << std::endl;
     pval = 2 * arma::normcdf(-1 * std::abs(adjStat));
     K1roots = t_K1roots;
   }
   
   if(! std::isfinite(pval)){
-    Rprintf("SPA does not give a valid p value, use normal approximation p value.");
+    std::cout << "SPA does not give a valid p value, use normal approximation p value." << std::endl;
     pval = 2 * arma::normcdf(-1 * std::abs(adjStat));
     converge = false;
   }
