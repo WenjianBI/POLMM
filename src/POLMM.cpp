@@ -426,7 +426,6 @@ Rcpp::List fastSaddle_Prob(double t_Stat,
   
   double m1 = arma::accu(t_muMat1 % cMat);
   
-  std::cout << "step1" << std::endl;
   Rcpp::List outUni1 = fastgetroot_K1(std::abs(adjStat), std::min(t_K1roots(0), 5.0), 
                                       t_Ratio0, t_muMat1, cMat, m1);
   Rcpp::List outUni2 = fastgetroot_K1(-1 * std::abs(adjStat), std::max(t_K1roots(1), -5.0), 
@@ -439,14 +438,20 @@ Rcpp::List fastSaddle_Prob(double t_Stat,
   bool outUnit1Converge = outUni1["converge"];
   bool outUnit2Converge = outUni2["converge"];
   
-  std::cout << "step2" << std::endl;
   if(outUnit1Converge == true && outUnit2Converge == true){
     
     double p1 = fastGet_Saddle_Prob(std::abs(adjStat), outUni1["root"], 
                                     outUni1["K2"], t_Ratio0, t_muMat1, cMat, m1, false);
     
+    std::cout << "outUni1:\t" << outUni1["root"] << outUni1["K2"] << std::endl;
+    std::cout << "p1:\t" << p1 << std::endl;
+    
     double p2 = fastGet_Saddle_Prob(-1 * std::abs(adjStat), outUni2["root"], 
                                     outUni2["K2"], t_Ratio0, t_muMat1, cMat, m1, false);
+    
+    std::cout << "outUni2:\t" << outUni2["root"] << outUni2["K2"] << std::endl;
+    
+    std::cout << "p2:\t" << p2 << std::endl;
     
     pval = p1 + p2;
     
@@ -458,7 +463,6 @@ Rcpp::List fastSaddle_Prob(double t_Stat,
     K1roots = t_K1roots;
   }
   
-  std::cout << "step3" << std::endl;
   if(! std::isfinite(pval)){
     std::cout << "SPA does not give a valid p value, use normal approximation p value." << std::endl;
     pval = 2 * arma::normcdf(-1 * std::abs(adjStat));
