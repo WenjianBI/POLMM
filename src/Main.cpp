@@ -137,6 +137,7 @@ Rcpp::List MAIN_REGION(std::vector<std::string> t_MarkerReqstd,
     if(StdStat > t_StdStat_cutoff){ // then use SPA/ER to correct p value
       // functions of SPA or ER
       arma::uvec posG1 = arma::find(GVec != 0);
+      std::cout  << "posG1.size():\t" << posG1.size() << std::endl;
       // int nG1 = posG1.size();
       
       // if(nG1 > t_NonZero_cutoff){
