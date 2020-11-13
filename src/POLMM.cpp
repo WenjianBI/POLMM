@@ -416,9 +416,10 @@ Rcpp::List fastSaddle_Prob(double t_Stat,
                            arma::mat t_iRMat1)   // N1 x (J-1)
 {
   int J = t_muMat1.n_cols;
+  int N1 = t_muMat1.n_rows;
+  
   t_muMat1 = t_muMat1.cols(0, J-2);
   double adjStat = t_Stat / sqrt(t_VarP);
-  int N1 = t_muMat1.n_rows;
   
   double sqrtVarW = sqrt(t_VarW);
   
@@ -454,7 +455,7 @@ Rcpp::List fastSaddle_Prob(double t_Stat,
     std::cout << "p1:\t" << p1 << std::endl;
     
     double p2 = fastGet_Saddle_Prob(-1 * std::abs(adjStat), outUni2["root"], 
-                                    outUni2["K2"], t_Ratio0, t_muMat1, cMat, m1, false);
+                                    outUni2["K2"], t_Ratio0, t_muMat1, cMat, m1, true);
     
     root = outUni2["root"];
     K2 = outUni2["K2"];
