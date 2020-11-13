@@ -347,6 +347,8 @@ Rcpp::List fastgetroot_K1(double t_Stat,
     
     diffX = -1 * K1 / K2;
     
+    std::cout << "K12Vec(1):\t" << K12Vec(1) << std::endl;
+    std::cout << "t_Ratio0:\t" << t_Ratio0 << std::endl;
     std::cout << "K1:\t" << K1 << std::endl;
     std::cout << "K2:\t" << K2 << std::endl;
     std::cout << "diffX:\t" << diffX << std::endl;
