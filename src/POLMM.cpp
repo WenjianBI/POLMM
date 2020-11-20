@@ -347,11 +347,11 @@ Rcpp::List fastgetroot_K1(double t_Stat,
     
     diffX = -1 * K1 / K2;
     
-    std::cout << "K12Vec(1):\t" << K12Vec(1) << std::endl;
-    std::cout << "t_Ratio0:\t" << t_Ratio0 << std::endl;
-    std::cout << "K1:\t" << K1 << std::endl;
-    std::cout << "K2:\t" << K2 << std::endl;
-    std::cout << "diffX:\t" << diffX << std::endl;
+    // std::cout << "K12Vec(1):\t" << K12Vec(1) << std::endl;
+    // std::cout << "t_Ratio0:\t" << t_Ratio0 << std::endl;
+    // std::cout << "K1:\t" << K1 << std::endl;
+    // std::cout << "K2:\t" << K2 << std::endl;
+    // std::cout << "diffX:\t" << diffX << std::endl;
     
     if(!std::isfinite(K1)){
       // checked it on 07/05:
@@ -451,17 +451,18 @@ Rcpp::List fastSaddle_Prob(double t_Stat,
     double p1 = fastGet_Saddle_Prob(std::abs(adjStat), outUni1["root"], 
                                     outUni1["K2"], t_Ratio0, t_muMat1, cMat, m1, false);
     
-    double root = outUni1["root"];
-    double K2 = outUni1["K2"];
-    std::cout << "outUni1:\t" << root << "\t" << K2 << std::endl;
+    // double root = outUni1["root"];
+    // double K2 = outUni1["K2"];
+    
+    // std::cout << "outUni1:\t" << root << "\t" << K2 << std::endl;
     std::cout << "p1:\t" << p1 << std::endl;
     
     double p2 = fastGet_Saddle_Prob(-1 * std::abs(adjStat), outUni2["root"], 
                                     outUni2["K2"], t_Ratio0, t_muMat1, cMat, m1, true);
     
-    root = outUni2["root"];
-    K2 = outUni2["K2"];
-    std::cout << "outUni2:\t" << root << "\t" << K2 << std::endl;
+    // root = outUni2["root"];
+    // K2 = outUni2["K2"];
+    // std::cout << "outUni2:\t" << root << "\t" << K2 << std::endl;
     std::cout << "p2:\t" << p2 << std::endl;
     
     pval = p1 + p2;
@@ -474,10 +475,10 @@ Rcpp::List fastSaddle_Prob(double t_Stat,
     K1roots = t_K1roots;
   }
   
-  if(! std::isfinite(pval)){
+  if((!std::isfinite(pval)) || (pval == 0)){
     std::cout << "SPA does not give a valid p value, use normal approximation p value." << std::endl;
     pval = 2 * arma::normcdf(-1 * std::abs(adjStat));
-    converge = false;
+    K1roots = t_K1roots;
   }
   
   Rcpp::List yList = Rcpp::List::create(Rcpp::Named("pval") = pval,
