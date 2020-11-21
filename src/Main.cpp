@@ -139,7 +139,7 @@ Rcpp::List MAIN_REGION(std::vector<std::string> t_MarkerReqstd,
       // functions of SPA or ER
       arma::uvec posG1 = arma::find(GVec != 0);
       std::cout << "posG1.size():\t" << posG1.size() << std::endl;
-      // int nG1 = posG1.size();
+      int nG1 = posG1.size();
       
       // if(nG1 > t_NonZero_cutoff){
         arma::vec VarWVec = ptr_gPOLMMobj->getVarWVec(adjGVec);
@@ -152,11 +152,15 @@ Rcpp::List MAIN_REGION(std::vector<std::string> t_MarkerReqstd,
         K1roots(0) = 3;
         K1roots(1) = -3;
         Rcpp::List resSPA = ptr_gPOLMMobj->MAIN_SPA(Stat, adjGVec, K1roots, VarS, VarW, Ratio0, posG1);
-        double pvalER = ptr_gPOLMMobj->MAIN_ER(GVec, posG1);
         
         double pvalSPA = resSPA["pval"];
         std::cout << "pvalSPA:\t" << pvalSPA << std::endl;
-        std::cout << "pvalER:\t" << pvalER << std::endl;
+        
+        if(nG1 <= t_NonZero_cutoff){
+          double pvalER = ptr_gPOLMMobj->MAIN_ER(GVec, posG1);
+          std::cout << "pvalER:\t" << pvalER << std::endl;
+        }
+        
         // std::cout << resSPA << std::endl;
         std::cout << "pvalNorm:\t" << 2 * arma::normcdf(-1*StdStat) << std::endl;
         
