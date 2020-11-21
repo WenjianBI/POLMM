@@ -31,7 +31,7 @@ void setPLINKobjInR(std::string t_bimFile,
 void setPOLMMobjInR(arma::mat t_muMat,
                     arma::mat t_iRMat,
                     arma::mat t_Cova,
-                    arma::vec t_yVec,
+                    arma::uvec t_yVec,
                     Rcpp::List t_SPmatR,    // output of makeSPmatR()
                     double t_tau,
                     bool t_printPCGInfo,
@@ -80,7 +80,8 @@ Rcpp::List MAIN_REGION(std::vector<std::string> t_MarkerReqstd,
   //
   arma::mat adjGMat(t_maxMarkers, n);       // adjusted genotype vector 
   arma::mat ZPZ_adjGMat(n, t_maxMarkers);   // t(Z) %*% P %*% Z %*% adjGMat
-  
+  ptr_gPOLMMobj->setSeqMat(t_NonZero_cutoff);
+    
   int indexPassingQC = 0;
   int indexChunkSave = 0;
   
@@ -137,7 +138,7 @@ Rcpp::List MAIN_REGION(std::vector<std::string> t_MarkerReqstd,
     if(StdStat > t_StdStat_cutoff){ // then use SPA/ER to correct p value
       // functions of SPA or ER
       arma::uvec posG1 = arma::find(GVec != 0);
-      std::cout  << "posG1.size():\t" << posG1.size() << std::endl;
+      std::cout << "posG1.size():\t" << posG1.size() << std::endl;
       // int nG1 = posG1.size();
       
       // if(nG1 > t_NonZero_cutoff){
@@ -151,11 +152,13 @@ Rcpp::List MAIN_REGION(std::vector<std::string> t_MarkerReqstd,
         K1roots(0) = 3;
         K1roots(1) = -3;
         Rcpp::List resSPA = ptr_gPOLMMobj->MAIN_SPA(Stat, adjGVec, K1roots, VarS, VarW, Ratio0, posG1);
+        double pvalER = ptr_gPOLMMobj->MAIN_ER(GVec, posG1);
         
-        double pval = resSPA["pval"];
-        std::cout << pval << std::endl;
+        double pvalSPA = resSPA["pval"];
+        std::cout << "pvalSPA:\t" << pvalSPA << std::endl;
+        std::cout << "pvalER:\t" << pvalER << std::endl;
         // std::cout << resSPA << std::endl;
-        std::cout << 2 * arma::normcdf(-1*StdStat) << std::endl;
+        std::cout << "pvalNorm:\t" << 2 * arma::normcdf(-1*StdStat) << std::endl;
         
       // }else{
         // something to add for Efficient Resampling (ER)

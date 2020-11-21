@@ -10,7 +10,7 @@ namespace POLMM {
 POLMMClass::POLMMClass(arma::mat t_muMat,
                        arma::mat t_iRMat,
                        arma::mat t_Cova,
-                       arma::vec t_yVec,
+                       arma::uvec t_yVec,
                        arma::sp_mat t_SparseGRM,
                        double t_tau,
                        bool t_printPCGInfo,
@@ -48,13 +48,14 @@ POLMMClass::POLMMClass(arma::mat t_muMat,
   // sum each (J-1) rows to 1 row: p x n(J-1) -> p x n
   m_XR_Psi_R = sumCols(XR_Psi_R, m_J);      // p x n
   
+  m_yVec = t_yVec - 1;
   arma::mat yMat(m_n, m_J, arma::fill::zeros);
   for(int i = 0; i < m_n; i++)
-    yMat(i, t_yVec(i)-1) = 1;
+    yMat(i, m_yVec(i)) = 1;
   
-  arma::mat ymuMat = yMat - m_muMat;                    // n x J
+  arma::mat ymuMat = yMat - m_muMat;                      // n x J
   arma::mat RymuMat = ymuMat.cols(0, m_J-2) / t_iRMat;    // n x (J-1): R %*% (y - mu)
-  m_RymuVec = sumCols(RymuMat, m_J);            // n x 1
+  m_RymuVec = sumCols(RymuMat, m_J);                      // n x 1
   
   arma::mat iSigma_CovaMat(m_n * (m_J-1), m_p);
   getPCGofSigmaAndCovaMat(m_CovaMat, iSigma_CovaMat);
@@ -486,6 +487,138 @@ Rcpp::List fastSaddle_Prob(double t_Stat,
                                         Rcpp::Named("K1roots") = K1roots);
   return yList;
 }
+
+void POLMMClass::setSeqMat(int t_NonZero_cutoff)         // number of subjects, if the number of subjects is less than or equal to this value, we use ER
+{
+  int n = t_NonZero_cutoff;
+  std::cout << "Setting m_SeqMat for Efficient Resampling (ER)...." << std::endl;
+  uint32_t nER = pow(m_J, n);       // J^n
+  arma::Col<uint32_t> y = arma::linspace<arma::Col<uint32_t>>(0, nER-1, nER);  // nER x 1 matrix: seq(0, nER-1, 1)
+  m_SeqMat.resize(n, nER);
+  uint32_t powJ = nER / m_J;         // J^(n-1)
+  arma::Col<uint8_t> SeqVec(nER);
+  for(int i = 0; i < n; i++){
+    int pos_row = n - 1 - i;
+    for(uint32_t j = 0; j < nER; j++){
+      SeqVec(j) = y(j) / powJ;
+      y(j) = y(j) - SeqVec(j) * powJ;
+    }
+    powJ = powJ / m_J;           // J^(n-2), ..., J^0
+    m_SeqMat.row(pos_row) = SeqVec.t();
+  }
+}
+
+// arma::umat updateSeqMat(arma::umat t_SeqMat, // n x J^n matrix
+//                         int t_n1,            // number of subjects, should be < n
+//                         int t_J)             // number of levels
+// {
+//   int nER = pow(t_J, t_n1);
+//   arma::umat PartSeqMat = t_SeqMat.submat(0, 0, t_n1-1, nER-1);
+//   return PartSeqMat;
+// }
+
+double POLMMClass::MAIN_ER(arma::vec t_GVec,
+                           arma::uvec t_posG1)
+{
+  int N1 = t_posG1.size();
+  uint32_t nER = pow(m_J, N1);
+  arma::Mat<uint8_t> SeqMat = m_SeqMat.submat(0, 0, N1-1, nER-1);
+  double pvalER = getPvalER(m_yVec.elem(t_posG1), t_GVec.elem(t_posG1), m_muMat.rows(t_posG1), m_iRMat.rows(t_posG1), SeqMat);
+  
+  return pvalER;
+}
+
+// Main function: note that n is the number of subjects with Geno != 0
+double getPvalER(arma::uvec t_yVec,     // N1 x 1 vector, from 0 to J-1
+                 arma::vec t_GVec,      // N1 x 1 vector,
+                 arma::mat t_muMat,     // N1 x J matrix,
+                 arma::mat t_iRMat,     // N1 x (J-1) matrix
+                 arma::Mat<uint8_t> t_SeqMat) // N1 x nER
+{
+  uint32_t nER = t_SeqMat.n_cols;
+  arma::vec StatVec = getStatVec(t_SeqMat, t_GVec, t_muMat, t_iRMat);
+  
+  arma::Col<uint8_t> yVec = arma::conv_to<arma::Col<uint8_t>>::from(t_yVec);
+  double StatObs = arma::as_scalar(getStatVec(yVec, t_GVec, t_muMat, t_iRMat));
+  
+  double eps = 1e-10;
+  
+  double pvalER = 0;
+  double absStatObs = std::abs(StatObs);
+  for(uint32_t i = 0; i < nER; i++){
+    double absStatTmp = std::abs(StatVec(i));
+    if(absStatObs < absStatTmp - eps){
+      pvalER += getProb(t_SeqMat.col(i), t_muMat);
+    }else if(absStatObs < absStatTmp + eps){
+      pvalER += 0.5 * getProb(t_SeqMat.col(i), t_muMat);
+    }
+  }
+  
+  return pvalER;
+}
+
+arma::vec getStatVec(arma::Mat<uint8_t> t_SeqMat,   // n x J^n matrix
+                     arma::vec t_GVec,      // n x 1 vector, where n is number of subjects with Geno != 0
+                     arma::mat t_muMat,     // n x J matrix, where n is number of subjects with Geno != 0
+                     arma::mat t_iRMat)     // n x (J-1) matrix
+{
+  int n = t_muMat.n_rows;
+  int J = t_muMat.n_cols;
+  int nER = t_SeqMat.n_cols;
+  
+  arma::vec StatVec(nER);
+  
+  arma::mat A(n, J-1);
+  for(int i = 0; i < J-1; i++){
+    A.col(i) = t_GVec / t_iRMat.col(i);
+  }
+  
+  double a1 = arma::accu(A % t_muMat.cols(0, J-2));
+  
+  for(int i = 0; i < nER; i++){
+    double a2 = 0;
+    for(int j = 0; j < n; j++){
+      int idxL = t_SeqMat(j, i); // from 0 to J-1, level index
+      if(idxL != J-1){
+        a2 += A(j,idxL);
+      }
+    }
+    
+    StatVec(i) = a2 - a1;
+  }
+  
+  return StatVec;
+}
+
+double getProbOne(arma::Col<uint8_t> t_SeqVec,  // n x 1
+                  arma::mat t_muMat)    // n x J
+{
+  int n = t_muMat.n_rows;
+  double tempProb = 1;
+  for(int j = 0; j < n; j++){
+    tempProb *= t_muMat(j, t_SeqVec(j));
+  }
+  return tempProb;
+}
+
+
+double getProb(arma::Mat<uint8_t> t_SeqMat,  // n x m matrix, where m \leq J^n is the number of resampling with abs(stat) > stat_obs
+               arma::mat t_muMat)            // n x J matrix
+{
+  int nER = t_SeqMat.n_cols;
+  
+  double prob = 0;
+  
+  for(int i = 0; i < nER; i++){
+    arma::Col<uint8_t> SeqVec = t_SeqMat.col(i);
+    double tempProb = getProbOne(SeqVec, t_muMat);
+    prob += tempProb;
+  }
+  
+  return prob;
+}
+
+
 
 }
 // make a global variable for future usage

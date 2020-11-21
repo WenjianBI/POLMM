@@ -16,6 +16,7 @@ private:
   // dimensions: sample size, number of categories, number of covariates
   int m_n, m_J, m_p;
   
+  arma::uvec m_yVec;
   arma::mat m_XXR_Psi_RX;  // XXR_Psi_RX ( n x p )
   arma::mat m_XR_Psi_R;    // XR_Psi_R ( p x n ), sum up XR_Psi_R ( p x n(J-1) ) for each subject
   arma::vec m_RymuVec;     // n x 1: row sum of the n x (J-1) matrix R %*% (yMat - muMat)
@@ -39,17 +40,17 @@ private:
   bool m_printPCGInfo;
   
   // for Efficient Resampling (ER)
-  arma::umat m_SeqMat;
-
+  arma::Mat<uint8_t> m_SeqMat;
+  
   ////////////////////// -------------------- functions ---------------------------------- //////////////////////
   
-
+  
 public:
   
   POLMMClass(arma::mat t_muMat,
              arma::mat t_iRMat,
              arma::mat t_Cova,
-             arma::vec t_yVec,
+             arma::uvec t_yVec,
              arma::sp_mat t_SparseGRM,
              double t_tau,
              bool t_printPCGInfo,
@@ -60,7 +61,7 @@ public:
   double getStatFast(arma::vec t_adjGVec);
   arma::vec get_ZPZ_adjGVec(arma::vec t_adjGVec);
   void getPCGofSigmaAndCovaMat(arma::mat t_xMat,             // matrix with dim of n(J-1) x p
-                                           arma::mat& t_iSigma_xMat);    // matrix with dim of n(J-1) x p
+                               arma::mat& t_iSigma_xMat);    // matrix with dim of n(J-1) x p
   void getPCGofSigmaAndVector(arma::vec t_y1Vec,    // vector with length of n(J-1)
                               arma::vec& t_xVec);    // vector with length of n(J-1)
   arma::mat getSigmaxMat(arma::mat& t_xMat);
@@ -70,7 +71,7 @@ public:
   
   arma::cube getInvBlockDiagSigma();
   arma::mat solverBlockDiagSigma(arma::mat& t_xMat);
-
+  
   void setRPsiR();
   arma::vec getVarWVec(arma::vec adjGVec);
   
@@ -81,7 +82,12 @@ public:
                       double t_VarW,
                       double t_Ratio0,
                       arma::uvec t_posG1);
-    
+  
+  double MAIN_ER(arma::vec t_GVec,
+                 arma::uvec t_posG1);
+  
+  void setSeqMat(int t_NonZero_cutoff);
+  
 };
 
 double K0(double t_x,
@@ -119,6 +125,23 @@ Rcpp::List fastSaddle_Prob(double t_Stat,
                            arma::vec t_adjGVec1, // N1 x 1, where N1 is length(G!=0)
                            arma::mat t_muMat1,   // N1 x (J-1)
                            arma::mat t_iRMat1);  // N1 x (J-1)
+
+double getPvalER(arma::uvec t_yVec,     // N1 x 1 vector, from 0 to J-1
+                 arma::vec t_GVec,      // N1 x 1 vector,
+                 arma::mat t_muMat,     // N1 x J matrix,
+                 arma::mat t_iRMat,     // N1 x (J-1) matrix
+                 arma::Mat<uint8_t> t_SeqMat);   // N1 x nER
+
+arma::vec getStatVec(arma::Mat<uint8_t> t_SeqMat,   // n x J^n matrix
+                     arma::vec t_GVec,         // n x 1 vector, where n is number of subjects with Geno != 0
+                     arma::mat t_muMat,        // n x J matrix, where n is number of subjects with Geno != 0
+                     arma::mat t_iRMat);       // n x (J-1) matrix
+
+double getProbOne(arma::Col<uint8_t> t_SeqVec,  // n x 1
+                  arma::mat t_muMat);           // n x J
+
+double getProb(arma::Mat<uint8_t> t_SeqMat,  // n x m matrix, where m \leq J^n is the number of resampling with abs(stat) > stat_obs
+               arma::mat t_muMat);           // n x J matrix
 
 }
 
