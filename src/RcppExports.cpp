@@ -20,14 +20,14 @@ BEGIN_RCPP
 END_RCPP
 }
 // setPOLMMobjInR
-void setPOLMMobjInR(arma::mat t_muMat, arma::mat t_iRMat, arma::mat t_Cova, arma::vec t_yVec, Rcpp::List t_SPmatR, double t_tau, bool t_printPCGInfo, double t_tolPCG, int t_maxiterPCG);
+void setPOLMMobjInR(arma::mat t_muMat, arma::mat t_iRMat, arma::mat t_Cova, arma::uvec t_yVec, Rcpp::List t_SPmatR, double t_tau, bool t_printPCGInfo, double t_tolPCG, int t_maxiterPCG);
 RcppExport SEXP _POLMM_setPOLMMobjInR(SEXP t_muMatSEXP, SEXP t_iRMatSEXP, SEXP t_CovaSEXP, SEXP t_yVecSEXP, SEXP t_SPmatRSEXP, SEXP t_tauSEXP, SEXP t_printPCGInfoSEXP, SEXP t_tolPCGSEXP, SEXP t_maxiterPCGSEXP) {
 BEGIN_RCPP
     Rcpp::RNGScope rcpp_rngScope_gen;
     Rcpp::traits::input_parameter< arma::mat >::type t_muMat(t_muMatSEXP);
     Rcpp::traits::input_parameter< arma::mat >::type t_iRMat(t_iRMatSEXP);
     Rcpp::traits::input_parameter< arma::mat >::type t_Cova(t_CovaSEXP);
-    Rcpp::traits::input_parameter< arma::vec >::type t_yVec(t_yVecSEXP);
+    Rcpp::traits::input_parameter< arma::uvec >::type t_yVec(t_yVecSEXP);
     Rcpp::traits::input_parameter< Rcpp::List >::type t_SPmatR(t_SPmatRSEXP);
     Rcpp::traits::input_parameter< double >::type t_tau(t_tauSEXP);
     Rcpp::traits::input_parameter< bool >::type t_printPCGInfo(t_printPCGInfoSEXP);
@@ -54,58 +54,11 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
-// rcpparma_hello_world
-arma::mat rcpparma_hello_world();
-RcppExport SEXP _POLMM_rcpparma_hello_world() {
-BEGIN_RCPP
-    Rcpp::RObject rcpp_result_gen;
-    Rcpp::RNGScope rcpp_rngScope_gen;
-    rcpp_result_gen = Rcpp::wrap(rcpparma_hello_world());
-    return rcpp_result_gen;
-END_RCPP
-}
-// rcpparma_outerproduct
-arma::mat rcpparma_outerproduct(const arma::colvec& x);
-RcppExport SEXP _POLMM_rcpparma_outerproduct(SEXP xSEXP) {
-BEGIN_RCPP
-    Rcpp::RObject rcpp_result_gen;
-    Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< const arma::colvec& >::type x(xSEXP);
-    rcpp_result_gen = Rcpp::wrap(rcpparma_outerproduct(x));
-    return rcpp_result_gen;
-END_RCPP
-}
-// rcpparma_innerproduct
-double rcpparma_innerproduct(const arma::colvec& x);
-RcppExport SEXP _POLMM_rcpparma_innerproduct(SEXP xSEXP) {
-BEGIN_RCPP
-    Rcpp::RObject rcpp_result_gen;
-    Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< const arma::colvec& >::type x(xSEXP);
-    rcpp_result_gen = Rcpp::wrap(rcpparma_innerproduct(x));
-    return rcpp_result_gen;
-END_RCPP
-}
-// rcpparma_bothproducts
-Rcpp::List rcpparma_bothproducts(const arma::colvec& x);
-RcppExport SEXP _POLMM_rcpparma_bothproducts(SEXP xSEXP) {
-BEGIN_RCPP
-    Rcpp::RObject rcpp_result_gen;
-    Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< const arma::colvec& >::type x(xSEXP);
-    rcpp_result_gen = Rcpp::wrap(rcpparma_bothproducts(x));
-    return rcpp_result_gen;
-END_RCPP
-}
 
 static const R_CallMethodDef CallEntries[] = {
     {"_POLMM_setPLINKobjInR", (DL_FUNC) &_POLMM_setPLINKobjInR, 4},
     {"_POLMM_setPOLMMobjInR", (DL_FUNC) &_POLMM_setPOLMMobjInR, 9},
     {"_POLMM_MAIN_REGION", (DL_FUNC) &_POLMM_MAIN_REGION, 7},
-    {"_POLMM_rcpparma_hello_world", (DL_FUNC) &_POLMM_rcpparma_hello_world, 0},
-    {"_POLMM_rcpparma_outerproduct", (DL_FUNC) &_POLMM_rcpparma_outerproduct, 1},
-    {"_POLMM_rcpparma_innerproduct", (DL_FUNC) &_POLMM_rcpparma_innerproduct, 1},
-    {"_POLMM_rcpparma_bothproducts", (DL_FUNC) &_POLMM_rcpparma_bothproducts, 1},
     {NULL, NULL, 0}
 };
 
