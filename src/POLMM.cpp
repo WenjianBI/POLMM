@@ -543,17 +543,33 @@ double getPvalER(arma::uvec t_yVec,     // N1 x 1 vector, from 0 to J-1
   
   double eps = 1e-10;
   
-  double pvalER = 0;
+  double pvalER_pos = 0;
+  double pvalER_neg = 0;
   double absStatObs = std::abs(StatObs);
   for(uint32_t i = 0; i < nER; i++){
-    double absStatTmp = std::abs(StatVec(i));
-    if(absStatObs < absStatTmp - eps){
-      pvalER += getProb(t_SeqMat.col(i), t_muMat);
-    }else if(absStatObs < absStatTmp + eps){
-      pvalER += 0.5 * getProb(t_SeqMat.col(i), t_muMat);
+    // double absStatTmp = std::abs(StatVec(i));
+    // if(absStatObs < absStatTmp - eps){
+    //   pvalER += getProb(t_SeqMat.col(i), t_muMat);
+    // }else if(absStatObs < absStatTmp + eps){
+    //   pvalER += 0.5 * getProb(t_SeqMat.col(i), t_muMat);
+    // }
+    double StatTmp = StatVec(i);
+    if(StatTmp > absStatObs + eps){
+      pvalER_pos += getProb(t_SeqMat.col(i), t_muMat);
+    }else if(StatTmp > absStatObs - eps){
+      pvalER_pos += 0.5 * getProb(t_SeqMat.col(i), t_muMat);
+    }
+    
+    if(StatTmp < -1 * absStatObs - eps){
+      pvalER_neg += getProb(t_SeqMat.col(i), t_muMat);
+    }else if(StatTmp < -1 * absStatObs + eps){
+      pvalER_neg += 0.5 * getProb(t_SeqMat.col(i), t_muMat);
     }
   }
   
+  std::cout << "pvalER_pos:\t" << pvalER_pos << std::endl;
+  std::cout << "pvalER_neg:\t" << pvalER_neg << std::endl;
+  double pvalER = pvalER_pos + pvalER_neg;
   return pvalER;
 }
 
