@@ -18,6 +18,8 @@ Rcpp::List MAIN_REGION(std::vector<std::string> t_MarkerReqstd,
                        int t_maxMarkers,
                        std::string t_outputFile,
                        double t_missingRate_cutoff,
-                       double t_maxMAF_cutoff);
+                       double t_maxMAF_cutoff,
+                       std::string t_kernel,
+                       arma::vec t_wBeta);
 
 #endif

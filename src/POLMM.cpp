@@ -456,7 +456,7 @@ Rcpp::List fastSaddle_Prob(double t_Stat,
     // double K2 = outUni1["K2"];
     
     // std::cout << "outUni1:\t" << root << "\t" << K2 << std::endl;
-    std::cout << "p1:\t" << p1 << std::endl;
+    // std::cout << "p1:\t" << p1 << std::endl;
     
     double p2 = fastGet_Saddle_Prob(-1 * std::abs(adjStat), outUni2["root"], 
                                     outUni2["K2"], t_Ratio0, t_muMat1, cMat, m1, true);
@@ -464,7 +464,7 @@ Rcpp::List fastSaddle_Prob(double t_Stat,
     // root = outUni2["root"];
     // K2 = outUni2["K2"];
     // std::cout << "outUni2:\t" << root << "\t" << K2 << std::endl;
-    std::cout << "p2:\t" << p2 << std::endl;
+    // std::cout << "p2:\t" << p2 << std::endl;
     
     pval = p1 + p2;
     
@@ -554,6 +554,7 @@ double getPvalER(arma::uvec t_yVec,     // N1 x 1 vector, from 0 to J-1
     //   pvalER += 0.5 * getProb(t_SeqMat.col(i), t_muMat);
     // }
     double StatTmp = StatVec(i);
+    
     if(StatTmp > absStatObs + eps){
       pvalER_pos += getProb(t_SeqMat.col(i), t_muMat);
     }else if(StatTmp > absStatObs - eps){
@@ -567,8 +568,8 @@ double getPvalER(arma::uvec t_yVec,     // N1 x 1 vector, from 0 to J-1
     }
   }
   
-  std::cout << "pvalER_pos:\t" << pvalER_pos << std::endl;
-  std::cout << "pvalER_neg:\t" << pvalER_neg << std::endl;
+  // std::cout << "pvalER_pos:\t" << pvalER_pos << std::endl;
+  // std::cout << "pvalER_neg:\t" << pvalER_neg << std::endl;
   double pvalER = pvalER_pos + pvalER_neg;
   return pvalER;
 }

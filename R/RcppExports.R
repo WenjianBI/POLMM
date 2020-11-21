@@ -9,7 +9,7 @@ setPOLMMobjInR <- function(t_muMat, t_iRMat, t_Cova, t_yVec, t_SPmatR, t_tau, t_
     invisible(.Call(`_POLMM_setPOLMMobjInR`, t_muMat, t_iRMat, t_Cova, t_yVec, t_SPmatR, t_tau, t_printPCGInfo, t_tolPCG, t_maxiterPCG))
 }
 
-MAIN_REGION <- function(t_MarkerReqstd, t_NonZero_cutoff, t_StdStat_cutoff, t_maxMarkers, t_outputFile, t_missingRate_cutoff, t_maxMAF_cutoff) {
-    .Call(`_POLMM_MAIN_REGION`, t_MarkerReqstd, t_NonZero_cutoff, t_StdStat_cutoff, t_maxMarkers, t_outputFile, t_missingRate_cutoff, t_maxMAF_cutoff)
+MAIN_REGION <- function(t_MarkerReqstd, t_NonZero_cutoff, t_StdStat_cutoff, t_maxMarkers, t_outputFile, t_missingRate_cutoff, t_maxMAF_cutoff, t_kernel, t_wBeta) {
+    .Call(`_POLMM_MAIN_REGION`, t_MarkerReqstd, t_NonZero_cutoff, t_StdStat_cutoff, t_maxMarkers, t_outputFile, t_missingRate_cutoff, t_maxMAF_cutoff, t_kernel, t_wBeta)
 }
 

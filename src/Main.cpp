@@ -60,7 +60,9 @@ Rcpp::List MAIN_REGION(std::vector<std::string> t_MarkerReqstd,
                        int t_maxMarkers,
                        std::string t_outputFile,
                        double t_missingRate_cutoff,
-                       double t_maxMAF_cutoff)
+                       double t_maxMAF_cutoff,
+                       std::string t_kernel,
+                       arma::vec t_wBeta)
 {
   // extract information from global variable ptr_gPLINKobj
   int n = ptr_gPLINKobj->getN();
@@ -73,8 +75,11 @@ Rcpp::List MAIN_REGION(std::vector<std::string> t_MarkerReqstd,
   std::vector<std::string> markerVec;
   std::vector<uint32_t> pdVec;
   std::vector<double> freqVec; 
+  std::vector<double> weightVec; 
   std::vector<double> StatVec;
   std::vector<bool> flipVec;
+  std::vector<double> pvalNormVec;
+  std::vector<double> pvalVec;
   arma::mat VarSMat;
   
   //
@@ -85,6 +90,11 @@ Rcpp::List MAIN_REGION(std::vector<std::string> t_MarkerReqstd,
   int indexPassingQC = 0;
   int indexChunkSave = 0;
   
+  arma::vec K1roots(2);
+  K1roots(0) = 3;
+  K1roots(1) = -3;
+  
+  arma::vec wGVecBT(n, arma::fill::zeros);
   // loop for all markers
   for(int i = 0; i < q; i++){
     
@@ -105,7 +115,10 @@ Rcpp::List MAIN_REGION(std::vector<std::string> t_MarkerReqstd,
     arma::vec GVec = ptr_gPLINKobj->getOneMarker(posMarker, freq, missingRate, posMissingGeno,
                                                  a1, a2, marker, pd, chr, flagTrueGeno);
     double MAF = std::min(freq, 1 - freq);
-
+    
+    double weight = getWeights(t_kernel, MAF, t_wBeta);
+    weightVec.push_back(weight);
+      
     // Quality Control (QC) based on missing rate and allele frequency
     if((missingRate > t_missingRate_cutoff) || (MAF > t_maxMAF_cutoff) || (MAF == 0))
       continue;
@@ -126,6 +139,7 @@ Rcpp::List MAIN_REGION(std::vector<std::string> t_MarkerReqstd,
 
     freqVec.push_back(MAF);
     flipVec.push_back(flip);
+    wGVecBT += GVec * weight;
 
     arma::vec adjGVec = ptr_gPOLMMobj->getadjGFast(GVec);
     double Stat = ptr_gPOLMMobj->getStatFast(adjGVec);
@@ -135,34 +149,42 @@ Rcpp::List MAIN_REGION(std::vector<std::string> t_MarkerReqstd,
     arma::vec ZPZ_adjGVec = ptr_gPOLMMobj->get_ZPZ_adjGVec(adjGVec);
     double VarS = as_scalar(adjGVec.t() * ZPZ_adjGVec);
     double StdStat = std::abs(Stat) / sqrt(VarS);
+    double pvalNorm = 2 * arma::normcdf(-1*StdStat);
+    double pval = pvalNorm;
+    
     if(StdStat > t_StdStat_cutoff){ // then use SPA/ER to correct p value
       // functions of SPA or ER
       arma::uvec posG1 = arma::find(GVec != 0);
       std::cout << "posG1.size():\t" << posG1.size() << std::endl;
       int nG1 = posG1.size();
       
-      // if(nG1 > t_NonZero_cutoff){
+      if(nG1 <= t_NonZero_cutoff){
+        double pvalER = ptr_gPOLMMobj->MAIN_ER(GVec, posG1);
+        pval = pvalER;
+        // std::cout << "pvalER:\t" << pvalER << std::endl;
+      }else{
         arma::vec VarWVec = ptr_gPOLMMobj->getVarWVec(adjGVec);
         double VarW = sum(VarWVec);
         double VarW1 = sum(VarWVec(posG1));
         double VarW0 = VarW - VarW1;
         double Ratio0 = VarW0 / VarW;
         
-        arma::vec K1roots(2);
-        K1roots(0) = 3;
-        K1roots(1) = -3;
         Rcpp::List resSPA = ptr_gPOLMMobj->MAIN_SPA(Stat, adjGVec, K1roots, VarS, VarW, Ratio0, posG1);
+        pval = resSPA["pval"];
+      }
+      
+      pvalNormVec.push_back(pvalNorm);
+      pvalVec.push_back(pval);
+      // if(nG1 > t_NonZero_cutoff){
         
-        double pvalSPA = resSPA["pval"];
-        std::cout << "pvalSPA:\t" << pvalSPA << std::endl;
         
-        if(nG1 <= t_NonZero_cutoff){
-          double pvalER = ptr_gPOLMMobj->MAIN_ER(GVec, posG1);
-          std::cout << "pvalER:\t" << pvalER << std::endl;
-        }
+        // double pvalSPA = resSPA["pval"];
+        // std::cout << "pvalSPA:\t" << pvalSPA << std::endl;
+        
+        
         
         // std::cout << resSPA << std::endl;
-        std::cout << "pvalNorm:\t" << 2 * arma::normcdf(-1*StdStat) << std::endl;
+        // std::cout << "pvalNorm:\t" << 2 * arma::normcdf(-1*StdStat) << std::endl;
         
       // }else{
         // something to add for Efficient Resampling (ER)
@@ -186,6 +208,30 @@ Rcpp::List MAIN_REGION(std::vector<std::string> t_MarkerReqstd,
     Rcpp::checkUserInterrupt();
   }
 
+  // additional burden test to further adjust for the variance
+  arma::vec wadjGVecBT = ptr_gPOLMMobj->getadjGFast(wGVecBT);
+  double wStatBT = ptr_gPOLMMobj->getStatFast(wadjGVecBT);
+  arma::vec ZPZ_wadjGVecBT = ptr_gPOLMMobj->get_ZPZ_adjGVec(wadjGVecBT);
+  double wVarSBT = as_scalar(wadjGVecBT.t() * ZPZ_wadjGVecBT);
+  double wStdStatBT = std::abs(wStatBT) / sqrt(wVarSBT);
+  double rBT = 1;
+  
+  if(wStdStatBT > t_StdStat_cutoff){
+    arma::uvec poswG1BT = arma::find(wGVecBT != 0);
+    double wVarSBT = as_scalar(wadjGVecBT.t() * ZPZ_wadjGVecBT);
+    arma::vec wVarWVecBT = ptr_gPOLMMobj->getVarWVec(wadjGVecBT);
+    double wVarWBT = sum(wVarWVecBT);
+    double wVarW1BT = sum(wVarWVecBT(poswG1BT));
+    double wVarW0BT = wVarWBT - wVarW1BT;
+    double wRatio0BT = wVarW0BT / wVarWBT;
+    Rcpp::List resSPA = ptr_gPOLMMobj->MAIN_SPA(wStatBT, wadjGVecBT, K1roots, wVarSBT, wVarWBT, wRatio0BT, poswG1BT);
+    Rcpp::NumericVector wadjPvalBT = {resSPA["pval"]};
+    Rcpp::NumericVector temp = Rcpp::qchisq(wadjPvalBT, 1, false, false);
+    double wadjVarSBT = pow(wStatBT,2) / temp(0);
+    rBT = wadjVarSBT / wVarSBT;
+    std::cout << "rBT:\t" << rBT << std::endl;
+  }
+  
   // total number of markers that pass QC from MAF and missing rate
   int nPassingQC = indexPassingQC + indexChunkSave * t_maxMarkers;
   
@@ -260,9 +306,13 @@ Rcpp::List MAIN_REGION(std::vector<std::string> t_MarkerReqstd,
                                           Rcpp::Named("VarSMat") = VarSMat,
                                           Rcpp::Named("markerVec") = markerVec,
                                           Rcpp::Named("freqVec") = freqVec,
+                                          Rcpp::Named("weightVec") = weightVec,
                                           Rcpp::Named("a1Vec") = a1Vec,
                                           Rcpp::Named("a2Vec") = a2Vec,
                                           Rcpp::Named("pdVec") = pdVec,
-                                          Rcpp::Named("flipVec") = flipVec);
+                                          Rcpp::Named("flipVec") = flipVec,
+                                          Rcpp::Named("pvalNormVec") = pvalNormVec,
+                                          Rcpp::Named("pvalVec") = pvalVec,
+                                          Rcpp::Named("rBT") = rBT);
   return OutList;
 }

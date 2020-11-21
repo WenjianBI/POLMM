@@ -102,7 +102,7 @@ POLMM.Region = function(objNull,
   setPOLMMobjInR(obj.CHR$muMat,
                  obj.CHR$iRMat,
                  objNull$Cova,
-                 objNull$yVec,
+                 objNull$yVec,          # 1 to J
                  SPmatR.CHR,
                  objNull$tau,
                  POLMM.control$printPCGInfo,
@@ -115,7 +115,7 @@ POLMM.Region = function(objNull,
   n = length(SubjID.step1)
   J = max(objNull$yVec)
   p = ncol(objNull$Cova)
-  NonZero_cutoff = floor(log(50000, J))  # for efficient resampling (ER)
+  NonZero_cutoff = floor(log(1e7, J))  # for efficient resampling (ER)
   maxMarkers = getMaxMarkers(POLMM.control$memory.chunk, n, J, p);
   
   print(paste0("The current POLMM.control$memory.chunk is ", POLMM.control$memory.chunk,"(GB)."))
@@ -135,21 +135,31 @@ POLMM.Region = function(objNull,
                           maxMarkers,
                           OutputFile,
                           POLMM.control$missing_cutoff,
-                          POLMM.control$max_maf_region)
+                          POLMM.control$max_maf_region,
+                          POLMM.control$kernel,
+                          POLMM.control$weights.beta)
     
+    StatVec = OutList$StatVec
     VarSVec = diag(OutList$VarSMat)
-    StdStatVec = OutList$StatVec / sqrt(VarSVec)
-    QVec = StdStatVec^2
-    adjPVec = PVec = pchisq(QVec, lower.tail = FALSE, df = 1)
+    # StdStatVec = OutList$StatVec / sqrt(VarSVec)
+    # QVec = StdStatVec^2
+    # adjPVec = PVec = pchisq(QVec, lower.tail = FALSE, df = 1)
+    pvalNormVec = OutList$pvalNormVec;
+    adjPVec = OutList$pvalVec;
+    adjVarSVec = StatVec^2 / qchisq(adjPVec, df = 1, lower.tail = F)
     
-    weights = Get_Weights(POLMM.control$kernel, OutList$freqVec, POLMM.control$weights.beta)
+    # weights = Get_Weights(POLMM.control$kernel, OutList$freqVec, POLMM.control$weights.beta)
+    weights = OutList$weightVec
     
-    # r0 = pmax(r0, 1)
-    r0 = 1
+    r0 = adjVarSVec / VarSVec 
+    r0 = pmax(r0, 1)
     wr0 = sqrt(r0) * weights
     
-    wStatVec = OutList$StatVec * weights
+    wStatVec = StatVec * weights
     wadjVarSMat = t(OutList$VarSMat * wr0) * wr0
+    wadjVarSMat = wadjVarSMat * max(OutList$rBT, 1)
+    
+    ###################
     
     out_SKAT_List = try(SKAT:::Met_SKAT_Get_Pvalue(Score = wStatVec, 
                                                    Phi = wadjVarSMat,
@@ -183,8 +193,8 @@ POLMM.Region = function(objNull,
                          paste(OutList$markerVec, collapse = ","),
                          paste(OutList$freqVec, collapse = ","),
                          paste(OutList$flipVec, collapse = ","),
-                         paste(OutList$StatVec, collapse = ","),
-                         paste(VarSVec, collapse = ","),
+                         paste(StatVec, collapse = ","),
+                         paste(adjVarSVec, collapse = ","),
                          paste(adjPVec, collapse = ",")))
   }
   

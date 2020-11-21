@@ -2,6 +2,26 @@
 #include <RcppArmadillo.h>
 #include "util.hpp"
 
+double getWeights(std::string t_kernel, 
+                  double t_freq, 
+                  arma::vec t_wBeta)
+{
+  if(t_wBeta.size() != 2)
+    Rcpp::stop("The size of argument t_wBeta should be 2.");
+  
+  double weights;
+  if(t_kernel == "linear")
+    weights = 1;
+  
+  if(t_kernel == "linear.weighted"){
+    Rcpp::NumericVector freq = {t_freq};
+    Rcpp::NumericVector temp = Rcpp::dbeta(freq, t_wBeta(0), t_wBeta(1));
+    weights = temp(0);
+  }
+  
+  return weights;
+}
+
 void imputeGeno(arma::vec& GVec, 
                 double freq, 
                 std::vector<uint32_t> posMissingGeno)

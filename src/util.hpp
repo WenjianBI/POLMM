@@ -5,6 +5,10 @@
 // [[Rcpp::depends(RcppArmadillo)]]
 #include <RcppArmadillo.h>
 
+double getWeights(std::string t_kernel, 
+                  double t_freq, 
+                  arma::vec t_wBeta);
+
 void imputeGeno(arma::vec& GVec, 
                 double freq, 
                 std::vector<uint32_t> posMissingGeno);

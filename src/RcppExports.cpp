@@ -38,8 +38,8 @@ BEGIN_RCPP
 END_RCPP
 }
 // MAIN_REGION
-Rcpp::List MAIN_REGION(std::vector<std::string> t_MarkerReqstd, double t_NonZero_cutoff, double t_StdStat_cutoff, int t_maxMarkers, std::string t_outputFile, double t_missingRate_cutoff, double t_maxMAF_cutoff);
-RcppExport SEXP _POLMM_MAIN_REGION(SEXP t_MarkerReqstdSEXP, SEXP t_NonZero_cutoffSEXP, SEXP t_StdStat_cutoffSEXP, SEXP t_maxMarkersSEXP, SEXP t_outputFileSEXP, SEXP t_missingRate_cutoffSEXP, SEXP t_maxMAF_cutoffSEXP) {
+Rcpp::List MAIN_REGION(std::vector<std::string> t_MarkerReqstd, double t_NonZero_cutoff, double t_StdStat_cutoff, int t_maxMarkers, std::string t_outputFile, double t_missingRate_cutoff, double t_maxMAF_cutoff, std::string t_kernel, arma::vec t_wBeta);
+RcppExport SEXP _POLMM_MAIN_REGION(SEXP t_MarkerReqstdSEXP, SEXP t_NonZero_cutoffSEXP, SEXP t_StdStat_cutoffSEXP, SEXP t_maxMarkersSEXP, SEXP t_outputFileSEXP, SEXP t_missingRate_cutoffSEXP, SEXP t_maxMAF_cutoffSEXP, SEXP t_kernelSEXP, SEXP t_wBetaSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -50,7 +50,9 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< std::string >::type t_outputFile(t_outputFileSEXP);
     Rcpp::traits::input_parameter< double >::type t_missingRate_cutoff(t_missingRate_cutoffSEXP);
     Rcpp::traits::input_parameter< double >::type t_maxMAF_cutoff(t_maxMAF_cutoffSEXP);
-    rcpp_result_gen = Rcpp::wrap(MAIN_REGION(t_MarkerReqstd, t_NonZero_cutoff, t_StdStat_cutoff, t_maxMarkers, t_outputFile, t_missingRate_cutoff, t_maxMAF_cutoff));
+    Rcpp::traits::input_parameter< std::string >::type t_kernel(t_kernelSEXP);
+    Rcpp::traits::input_parameter< arma::vec >::type t_wBeta(t_wBetaSEXP);
+    rcpp_result_gen = Rcpp::wrap(MAIN_REGION(t_MarkerReqstd, t_NonZero_cutoff, t_StdStat_cutoff, t_maxMarkers, t_outputFile, t_missingRate_cutoff, t_maxMAF_cutoff, t_kernel, t_wBeta));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -58,7 +60,7 @@ END_RCPP
 static const R_CallMethodDef CallEntries[] = {
     {"_POLMM_setPLINKobjInR", (DL_FUNC) &_POLMM_setPLINKobjInR, 4},
     {"_POLMM_setPOLMMobjInR", (DL_FUNC) &_POLMM_setPOLMMobjInR, 9},
-    {"_POLMM_MAIN_REGION", (DL_FUNC) &_POLMM_MAIN_REGION, 7},
+    {"_POLMM_MAIN_REGION", (DL_FUNC) &_POLMM_MAIN_REGION, 9},
     {NULL, NULL, 0}
 };
 
