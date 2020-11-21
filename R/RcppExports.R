@@ -13,19 +13,3 @@ MAIN_REGION <- function(t_MarkerReqstd, t_NonZero_cutoff, t_StdStat_cutoff, t_ma
     .Call(`_POLMM_MAIN_REGION`, t_MarkerReqstd, t_NonZero_cutoff, t_StdStat_cutoff, t_maxMarkers, t_outputFile, t_missingRate_cutoff, t_maxMAF_cutoff)
 }
 
-rcpparma_hello_world <- function() {
-    .Call(`_POLMM_rcpparma_hello_world`)
-}
-
-rcpparma_outerproduct <- function(x) {
-    .Call(`_POLMM_rcpparma_outerproduct`, x)
-}
-
-rcpparma_innerproduct <- function(x) {
-    .Call(`_POLMM_rcpparma_innerproduct`, x)
-}
-
-rcpparma_bothproducts <- function(x) {
-    .Call(`_POLMM_rcpparma_bothproducts`, x)
-}
-
