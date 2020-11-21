@@ -189,7 +189,8 @@ POLMM.Region = function(objNull,
     OUT.Region = rbind(OUT.Region,
                        c(Region, 
                          length(OutList$markerVec), 
-                         Pvalue, 
+                         Pvalue,
+                         error.code,
                          paste(OutList$markerVec, collapse = ","),
                          paste(OutList$freqVec, collapse = ","),
                          paste(OutList$flipVec, collapse = ","),
@@ -203,8 +204,9 @@ POLMM.Region = function(objNull,
                          full.names = T)
   file.remove(tempFiles)
   # out_Multi_Set = rnorm(1)
-  # colnames(out_Multi_Set) = c("SetID", "nSNP", "P.SKAT-O", "P.SKAT", "P.Burden",
-  #                             "error.code", "SNP.Info", "SNP.MAF","SNP.AlleleFlip","SNP.beta","SNP.pvalue")
+  colnames(OUT.Region) = c("SetID", "nSNP", "P.SKAT-O", "P.SKAT", "P.Burden",
+                           "error.code", "markerInfo", "markerMAF","markerAlleleFlip",
+                           "markerStat","markerVarS","markerPvalue")
   
   # return(out_Multi_Set)
   return(OUT.Region)
