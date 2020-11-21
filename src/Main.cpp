@@ -116,14 +116,14 @@ Rcpp::List MAIN_REGION(std::vector<std::string> t_MarkerReqstd,
                                                  a1, a2, marker, pd, chr, flagTrueGeno);
     double MAF = std::min(freq, 1 - freq);
     
-    double weight = getWeights(t_kernel, MAF, t_wBeta);
-    weightVec.push_back(weight);
-      
     // Quality Control (QC) based on missing rate and allele frequency
     if((missingRate > t_missingRate_cutoff) || (MAF > t_maxMAF_cutoff) || (MAF == 0))
       continue;
 
     // push back to output
+    double weight = getWeights(t_kernel, MAF, t_wBeta);
+    weightVec.push_back(weight);
+    
     a1Vec.push_back(a1);
     a2Vec.push_back(a2);
     markerVec.push_back(marker);
@@ -172,9 +172,6 @@ Rcpp::List MAIN_REGION(std::vector<std::string> t_MarkerReqstd,
         Rcpp::List resSPA = ptr_gPOLMMobj->MAIN_SPA(Stat, adjGVec, K1roots, VarS, VarW, Ratio0, posG1);
         pval = resSPA["pval"];
       }
-      
-      pvalNormVec.push_back(pvalNorm);
-      pvalVec.push_back(pval);
       // if(nG1 > t_NonZero_cutoff){
         
         
@@ -193,6 +190,8 @@ Rcpp::List MAIN_REGION(std::vector<std::string> t_MarkerReqstd,
     }
 
     // insert adjGVec and ZPZ_adjGVec into a pre-defined matrix
+    pvalNormVec.push_back(pvalNorm);
+    pvalVec.push_back(pval);
     adjGMat.row(indexPassingQC) = adjGVec.t();
     ZPZ_adjGMat.col(indexPassingQC) = ZPZ_adjGVec;
 
