@@ -188,7 +188,7 @@ split.ranges.bgen = function(bgi.file, nSubj, memory.chunk)
     # range = c(chr, pos.start, pos.end)
     # Ranges = rbind(Ranges, range)
     for(j in 1:length(idx.start)){
-      RSID.set[[idx]] = infos1$rsid[idx.start[j]:idx.end[j]]
+      RSID.set[[idx]] = unique(infos1$rsid[idx.start[j]:idx.end[j]])
       idx = idx + 1
     }
   }
