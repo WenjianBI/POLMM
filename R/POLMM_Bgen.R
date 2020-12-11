@@ -106,11 +106,19 @@ POLMM.bgen = function(objNull,
   
   M = RangesList$M
   RSID.set = RangesList$RSID.set
+  chrVecinRange = RangesList$chrVecinRange
   
   print(paste0("Totally ", M, " markers in plink files."))
 
-  if(!is.null(chrVec.bgen))
-    Ranges = subset(Ranges, is.element(chr, chrVec.bgen))
+  if(!is.null(chrVec.bgen)){
+    # Ranges = subset(Ranges, is.element(chr, chrVec.bgen))
+    posinChrVec = which(is.element(chrVecinRange, chrVec.bgen))
+    if(length(posinChrVec) == 0)
+      stop("length(posinChrVec) == 0. Please check 'chrVec.bgen' and 'chr' in the bgi file.")
+    RSID.set = RSID.set[posinChrVec]
+    chrVecinRange = chrVecinRange[posinChrVec]
+  }
+    
   
   # n.chunk = nrow(Ranges)
   n.chunk = length(RSID.set)
@@ -124,6 +132,7 @@ POLMM.bgen = function(objNull,
     # pos.start = Ranges$pos.start[i]
     # pos.end = Ranges$pos.end[i]
     rsid = RSID.set[[i]]
+    chr = chrVecinRange[i]
     
     Geno.mtx = SAIGE.read.bgen.range(bgen.file, 
                                      bgi.file, 
@@ -176,6 +185,7 @@ split.ranges.bgen = function(bgi.file, nSubj, memory.chunk)
   
   # Ranges = c()
   RSID.set = list()
+  chrVecinRange = c()
   idx = 1
   for(chr in uchr){
     infos1 = infos %>% dplyr::filter(chromosome == chr)
@@ -190,13 +200,14 @@ split.ranges.bgen = function(bgi.file, nSubj, memory.chunk)
     for(j in 1:length(idx.start)){
       RSID.set[[idx]] = unique(infos1$rsid[idx.start[j]:idx.end[j]])
       idx = idx + 1
+      chrVecinRange = c(chrVecinRange, chr)
     }
   }
   # Ranges = as.data.frame(Ranges, stringsAsFactors = F)
   # colnames(Ranges) = c("chr", "pos.start", "pos.end")
   
   # return(list(Ranges = Ranges, M = M))
-  return(list(RSID.set = RSID.set, M = M))
+  return(list(RSID.set = RSID.set, M = M, chrVecinRange = chrVecinRange))
 }
 
 
