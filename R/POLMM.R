@@ -123,7 +123,10 @@ POLMM = function(objNull,
     }
   }
   
-  chrVec = gsub("^0", "", chrVec)   # added on 12-17-2020, in case that chrVec = "01".
+  # added on 12-17-2020, in case that chrVec = "01".
+  chrVec = gsub("^0", "", chrVec)   
+  names(objNull$LOCOList) = gsub("^0", "", names(objNull$LOCOList))
+  
   if(length(chrVec)==1){
     message(paste0("Chromosome of all markers in analysis are ",chrVec,"."))
     chrVec = rep(chrVec, m)
