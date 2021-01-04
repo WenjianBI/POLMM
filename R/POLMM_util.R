@@ -1,9 +1,9 @@
 
 check.POLMM.control = function(POLMM.control = NULL, 
-                               which.step = NULL)          # "step1" or "step2"
+                               which.step = "step2")          # "step1" or "step2"
 {
   # argument of 'which.step' can be only "step1" or "step2"
-  if(is.null(which.step) | !which.step %in% c("step1", "step2")){
+  if(!which.step %in% c("step1", "step2")){
     stop("Argument of 'which.step' should be 'step1' or 'step2'.")
   }
   
