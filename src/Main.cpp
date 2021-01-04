@@ -54,6 +54,110 @@ void setPOLMMobjInR(arma::mat t_muMat,
 }
 
 // [[Rcpp::export]]
+Rcpp::List MAIN_MARKER(std::vector<std::string> t_MarkerReqstd,
+                       double t_StdStat_cutoff,
+                       double t_missingRate_cutoff,
+                       double t_minMAF_cutoff,
+                       int t_minMAC_cutoff,
+                       double t_varRatio)
+{
+  // extract information from global variable ptr_gPLINKobj
+  int n = ptr_gPLINKobj->getN();
+  std::vector<uint32_t> posMarkerInPlink = ptr_gPLINKobj->getPosMarkerInPlink(t_MarkerReqstd);
+  int q = posMarkerInPlink.size();         // number of markers in the region
+  
+  // set up output
+  std::vector<double> StatVec;
+  std::vector<double> VarSVec;
+  std::vector<double> pvalVec;
+  std::vector<std::string> markerVec;
+  std::vector<double> freqVec; 
+  std::vector<bool> flipVec;
+  std::vector<std::string> infoVec;    // marker infomation: CHR:POS:REF:ALT
+  
+  // loop for all markers
+  int indexPassingQC = 0;
+  for(int i = 0; i < q; i++){
+    
+    if(i % 1000 == 0){
+      std::cout << "Completed " << i << "/" << q << " markers in the block." << std::endl;
+      std::cout << "indexPassingQC:\t" << indexPassingQC << std::endl;
+    }
+    
+    uint32_t posMarker = posMarkerInPlink.at(i);
+    double freq, missingRate;
+    std::vector<uint32_t> posMissingGeno;
+    std::string a1, a2, marker;
+    uint32_t pd;
+    uint8_t chr;
+    bool flip = false;
+    bool flagTrueGeno = true;
+    
+    arma::vec GVec = ptr_gPLINKobj->getOneMarker(posMarker, freq, missingRate, posMissingGeno,
+                                                 a1, a2, marker, pd, chr, flagTrueGeno);
+    
+    std::string info = std::to_string(chr)+":"+std::to_string(pd)+":"+a1+":"+a2;
+    
+    double MAF = std::min(freq, 1 - freq);
+    int MAC = MAF * n * (1-missingRate);
+    
+    // Quality Control (QC) based on missing rate and allele frequency
+    if((missingRate > t_missingRate_cutoff) || (MAF < t_minMAF_cutoff) || (MAC < t_minMAC_cutoff))
+      continue;
+    
+    if(missingRate != 0)
+      imputeGeno(GVec, freq, posMissingGeno);
+    
+    if(freq > 0.5){
+      GVec = 2 - GVec;
+      flip = true;
+    }
+    
+    arma::vec adjGVec = ptr_gPOLMMobj->getadjGFast(GVec);
+    double Stat = ptr_gPOLMMobj->getStatFast(adjGVec);
+    arma::vec VarWVec = ptr_gPOLMMobj->getVarWVec(adjGVec);
+    double VarW = sum(VarWVec);
+    double VarS = VarW * t_varRatio;
+    
+    double StdStat = std::abs(Stat) / sqrt(VarS);
+    double pvalNorm = 2 * arma::normcdf(-1*StdStat);
+    double pval = pvalNorm;
+    
+    arma::vec K1roots = {3, -3};
+    if(StdStat > t_StdStat_cutoff){
+      
+      arma::uvec posG1 = arma::find(GVec != 0);
+      std::cout << "posG1.size():\t" << posG1.size() << std::endl;
+      double VarW1 = sum(VarWVec(posG1));
+      double VarW0 = VarW - VarW1;
+      double Ratio0 = VarW0 / VarW;
+      
+      Rcpp::List resSPA = ptr_gPOLMMobj->MAIN_SPA(Stat, adjGVec, K1roots, VarS, VarW, Ratio0, posG1);
+      pval = resSPA["pval"];
+    }
+    
+    // push back results to the output
+    markerVec.push_back(marker);
+    infoVec.push_back(info);
+    flipVec.push_back(flip);
+    StatVec.push_back(Stat);
+    pvalVec.push_back(pval);
+    VarSVec.push_back(VarS);
+    freqVec.push_back(MAF);
+  }
+  
+  Rcpp::List OutList = Rcpp::List::create(Rcpp::Named("StatVec") = StatVec,
+                                          Rcpp::Named("VarSVec") = VarSVec,
+                                          Rcpp::Named("pvalVec") = pvalVec,
+                                          Rcpp::Named("markerVec") = markerVec,
+                                          Rcpp::Named("freqVec") = freqVec,
+                                          Rcpp::Named("flipVec") = flipVec,
+                                          Rcpp::Named("infoVec") = infoVec);
+  
+  return OutList;  
+}
+
+// [[Rcpp::export]]
 Rcpp::List MAIN_REGION(std::vector<std::string> t_MarkerReqstd,
                        double t_NonZero_cutoff,
                        double t_StdStat_cutoff,
@@ -80,6 +184,7 @@ Rcpp::List MAIN_REGION(std::vector<std::string> t_MarkerReqstd,
   std::vector<bool> flipVec;
   std::vector<double> pvalNormVec;
   std::vector<double> pvalVec;
+  std::vector<int> posVec;
   arma::mat VarSMat;
   
   //
@@ -95,6 +200,7 @@ Rcpp::List MAIN_REGION(std::vector<std::string> t_MarkerReqstd,
   K1roots(1) = -3;
   
   arma::vec wGVecBT(n, arma::fill::zeros);
+  
   // loop for all markers
   for(int i = 0; i < q; i++){
     
@@ -128,6 +234,7 @@ Rcpp::List MAIN_REGION(std::vector<std::string> t_MarkerReqstd,
     a2Vec.push_back(a2);
     markerVec.push_back(marker);
     pdVec.push_back(pd);
+    posVec.push_back(i);
 
     if(missingRate != 0)
       imputeGeno(GVec, freq, posMissingGeno);
@@ -312,6 +419,7 @@ Rcpp::List MAIN_REGION(std::vector<std::string> t_MarkerReqstd,
                                           Rcpp::Named("flipVec") = flipVec,
                                           Rcpp::Named("pvalNormVec") = pvalNormVec,
                                           Rcpp::Named("pvalVec") = pvalVec,
+                                          Rcpp::Named("posVec") = posVec,
                                           Rcpp::Named("rBT") = rBT);
   return OutList;
 }

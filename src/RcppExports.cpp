@@ -37,6 +37,22 @@ BEGIN_RCPP
     return R_NilValue;
 END_RCPP
 }
+// MAIN_MARKER
+Rcpp::List MAIN_MARKER(std::vector<std::string> t_MarkerReqstd, double t_StdStat_cutoff, double t_missingRate_cutoff, double t_minMAF_cutoff, int t_minMAC_cutoff, double t_varRatio);
+RcppExport SEXP _POLMM_MAIN_MARKER(SEXP t_MarkerReqstdSEXP, SEXP t_StdStat_cutoffSEXP, SEXP t_missingRate_cutoffSEXP, SEXP t_minMAF_cutoffSEXP, SEXP t_minMAC_cutoffSEXP, SEXP t_varRatioSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< std::vector<std::string> >::type t_MarkerReqstd(t_MarkerReqstdSEXP);
+    Rcpp::traits::input_parameter< double >::type t_StdStat_cutoff(t_StdStat_cutoffSEXP);
+    Rcpp::traits::input_parameter< double >::type t_missingRate_cutoff(t_missingRate_cutoffSEXP);
+    Rcpp::traits::input_parameter< double >::type t_minMAF_cutoff(t_minMAF_cutoffSEXP);
+    Rcpp::traits::input_parameter< int >::type t_minMAC_cutoff(t_minMAC_cutoffSEXP);
+    Rcpp::traits::input_parameter< double >::type t_varRatio(t_varRatioSEXP);
+    rcpp_result_gen = Rcpp::wrap(MAIN_MARKER(t_MarkerReqstd, t_StdStat_cutoff, t_missingRate_cutoff, t_minMAF_cutoff, t_minMAC_cutoff, t_varRatio));
+    return rcpp_result_gen;
+END_RCPP
+}
 // MAIN_REGION
 Rcpp::List MAIN_REGION(std::vector<std::string> t_MarkerReqstd, double t_NonZero_cutoff, double t_StdStat_cutoff, int t_maxMarkers, std::string t_outputFile, double t_missingRate_cutoff, double t_maxMAF_cutoff, std::string t_kernel, arma::vec t_wBeta);
 RcppExport SEXP _POLMM_MAIN_REGION(SEXP t_MarkerReqstdSEXP, SEXP t_NonZero_cutoffSEXP, SEXP t_StdStat_cutoffSEXP, SEXP t_maxMarkersSEXP, SEXP t_outputFileSEXP, SEXP t_missingRate_cutoffSEXP, SEXP t_maxMAF_cutoffSEXP, SEXP t_kernelSEXP, SEXP t_wBetaSEXP) {
@@ -60,6 +76,7 @@ END_RCPP
 static const R_CallMethodDef CallEntries[] = {
     {"_POLMM_setPLINKobjInR", (DL_FUNC) &_POLMM_setPLINKobjInR, 4},
     {"_POLMM_setPOLMMobjInR", (DL_FUNC) &_POLMM_setPOLMMobjInR, 9},
+    {"_POLMM_MAIN_MARKER", (DL_FUNC) &_POLMM_MAIN_MARKER, 6},
     {"_POLMM_MAIN_REGION", (DL_FUNC) &_POLMM_MAIN_REGION, 9},
     {NULL, NULL, 0}
 };

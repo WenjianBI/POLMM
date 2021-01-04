@@ -63,7 +63,6 @@ void PlinkClass::readBimFile()
     std::transform(line_elements[5].begin(), line_elements[5].end(), line_elements[5].begin(), toupper);
     m_a1.push_back(line_elements[4]);
     m_a2.push_back(line_elements[5]);
-
   }
   m_M = m_M0;
 }
@@ -114,16 +113,34 @@ void PlinkClass::setPosSampleInPlink(std::vector<std::string> t_SampleInModel)
   std::cout << "Setting position of samples in plink files...." << std::endl;
   m_N = t_SampleInModel.size();
   m_numBytesofEachMarker = (m_N + 3) / 4;
-  m_posSampleInPlink.clear();
+  
+  Rcpp::CharacterVector SampleInModel(m_N);
+  for(uint32_t i = 0; i < m_N; i++)
+    SampleInModel(i) = t_SampleInModel.at(i);
+  
+  uint32_t N_plink = m_SampleInPlink.size();
+  Rcpp::CharacterVector SampleInPlink(N_plink);
+  for(uint32_t i = 0; i < N_plink; i++)
+    SampleInPlink(i) = m_SampleInPlink.at(i);
+    
+  Rcpp::IntegerVector posSampleInPlink = Rcpp::match(SampleInModel, SampleInPlink);
+  m_posSampleInPlink.resize(m_N);
   for(uint32_t i = 0; i < m_N; i++){
-    std::string sample = t_SampleInModel.at(i);
-    auto pos = std::find(m_SampleInPlink.begin(), m_SampleInPlink.end(), sample);
-    if(pos != m_SampleInPlink.end()){
-      m_posSampleInPlink.push_back(pos - m_SampleInPlink.begin());
-    }else{
+    if(Rcpp::IntegerVector::is_na(posSampleInPlink.at(i)))
       Rcpp::stop("At least one subject requested is not in Plink file.");
-    }
+    m_posSampleInPlink.at(i) = posSampleInPlink.at(i) - 1;   // convert "starting from 1" to "starting from 0"
   }
+
+  // m_posSampleInPlink.clear();
+  // for(uint32_t i = 0; i < m_N; i++){
+  //   std::string sample = t_SampleInModel.at(i);
+  //   auto pos = std::find(m_SampleInPlink.begin(), m_SampleInPlink.end(), sample);
+  //   if(pos != m_SampleInPlink.end()){
+  //     m_posSampleInPlink.push_back(pos - m_SampleInPlink.begin());
+  //   }else{
+  //     Rcpp::stop("At least one subject requested is not in Plink file.");
+  //   }
+  // }
 }
 
 std::vector<uint32_t> PlinkClass::getPosMarkerInPlink(std::vector<std::string> t_MarkerReqstd)

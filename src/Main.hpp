@@ -22,4 +22,11 @@ Rcpp::List MAIN_REGION(std::vector<std::string> t_MarkerReqstd,
                        std::string t_kernel,
                        arma::vec t_wBeta);
 
+Rcpp::List MAIN_MARKER(std::vector<std::string> t_MarkerReqstd,
+                       double t_StdStat_cutoff,
+                       double t_missingRate_cutoff,
+                       double t_minMAF_cutoff,
+                       int t_minMAC_cutoff,
+                       double t_varRatio);
+
 #endif
