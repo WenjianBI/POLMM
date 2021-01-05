@@ -19,7 +19,6 @@ check.POLMM.control = function(POLMM.control = NULL,
                                  min_mac_marker = 20,
                                  max_maf_region = 0.01,
                                  nMarkers_output = 10000,
-                                 SPAcutoff = 2,
                                  memory_chunk = 4,
                                  kernel = "linear.weighted",   # the below is parameters for region-based testing
                                  method_region = "SKAT-O",

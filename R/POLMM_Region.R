@@ -109,7 +109,7 @@ POLMM.Region = function(objNull,
   print(paste0("Based on the sample size, we divide region with more than ", maxMarkers, " markers into multiple chunks to save the memory usage."))
   print("If the memory usage still exceed the memory you request, please set a smaller POLMM.control$memory_chunk.")
   
-  StdStat_cutoff = POLMM.control$SPAcutoff;
+  StdStat_cutoff = POLMM.control$SPA_cutoff;
   
   OUT.Region = c()
   for(i in 1:length(AnnoList)){
@@ -120,7 +120,7 @@ POLMM.Region = function(objNull,
     AnnoMat = AnnoGene$AnnoMat
     OutList = MAIN_REGION(markers,
                           NonZero_cutoff,
-                          POLMM.control$SPAcutoff,
+                          StdStat_cutoff,
                           maxMarkers,
                           OutputFile,
                           POLMM.control$missing_cutoff,
