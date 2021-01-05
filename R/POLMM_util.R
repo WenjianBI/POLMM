@@ -22,12 +22,13 @@ check.POLMM.control = function(POLMM.control = NULL,
                                  SPAcutoff = 2,
                                  memory_chunk = 4,
                                  kernel = "linear.weighted",   # the below is parameters for region-based testing
-                                 method = "SKAT-O",
-                                 weights_beta = c(1,25),
+                                 method_region = "SKAT-O",
+                                 weights_beta = c(1, 25),
                                  r_corr = NULL,
                                  printPCGInfo = FALSE,
                                  tolPCG = 1e-5,
-                                 maxiterPCG = 100)
+                                 maxiterPCG = 100,
+                                 SPA_cutoff = 2)
   }
   
   # use the default setting or update it
