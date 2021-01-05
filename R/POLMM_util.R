@@ -88,15 +88,15 @@ check.POLMM.control = function(POLMM.control = NULL,
       stop("'method' should be 'SKAT', 'Burden', or 'SKAT-O'. Check 'Details' for more details.")
     
     if(is.null(POLMM.control$r_corr)){
-      if(method_region == "SKAT") POLMM.control$r.corr = 0;
-      if(method_region == "Burden") POLMM.control$r.corr = 1;
-      if(method_region == "SKAT-O") POLMM.control$r.corr = c(0, 0.1^2, 0.2^2, 0.3^2, 0.5^2, 0.5, 1);  # r.corr = 0 is SKAT, r.corr = 1 is Burden Test
+      if(method_region == "SKAT") POLMM.control$r_corr = 0;
+      if(method_region == "Burden") POLMM.control$r_corr = 1;
+      if(method_region == "SKAT-O") POLMM.control$r_corr = c(0, 0.1^2, 0.2^2, 0.3^2, 0.5^2, 0.5, 1);  # r_corr = 0 is SKAT, r_corr = 1 is Burden Test
     }else{
       message("Since 'r_corr' is specified, the 'method_region' is ignored.")
     }
     
-    if(any(POLMM.control$r.corr < 0 | POLMM.control$r.corr > 1))
-      stop("'r.corr' should be a numeric vector in which each element is between 0 and 1. Check 'Details' for more details.")
+    if(any(POLMM.control$r_corr < 0 | POLMM.control$r_corr > 1))
+      stop("'r_corr' should be a numeric vector in which each element is between 0 and 1. Check 'Details' for more details.")
   }
   
   return(POLMM.control)
@@ -271,14 +271,14 @@ getMaxMarkers = function(memory_chunk,
 
 ####### ---------- Get Weights from MAF ---------- #######
 
-Get_Weights = function(kernel, freqVec, weights.beta)
+Get_Weights = function(kernel, freqVec, weights_beta)
 {
   if(kernel == "linear"){
     weights = rep(1, length(freqVec)) 
   }
   
   if(kernel == "linear.weighted"){
-    weights = dbeta(freqVec, weights.beta[1], weights.beta[2])
+    weights = dbeta(freqVec, weights_beta[1], weights_beta[2])
   }
   
   return(weights)

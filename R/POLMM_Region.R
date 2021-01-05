@@ -29,9 +29,9 @@
 #' \item{memory_chunk: a cutoff (Gb) to determine how many markers are in one chunk for region-based analysis [default=4].}
 #' \item{kernel: how to weight markers for region-based analysis [default="linear.weighted"].}
 #' \item{method: method to conduct region-based analysis [default="method"].}
-#' \item{weights.beta:  [default=c(1,25)].}
+#' \item{weights_beta:  [default=c(1,25)].}
 #' \item{weights:  [default=NULL].}
-#' \item{r.corr:  [default=NULL].}
+#' \item{r_corr:  [default=NULL].}
 #' \item{printPCGInfo:  [default=FALSE].}
 #' \item{tolPCG:  [default=1e-5].}
 #' \item{maxiterPCG:  [default=100].}
@@ -106,7 +106,7 @@ POLMM.Region = function(objNull,
   maxMarkers = getMaxMarkers(memory_chunk, n, J, p);
   
   print(paste0("The current POLMM.control$memory_chunk is ", memory_chunk,"(GB)."))
-  print(paste0("Based on the sample size, we divide region with more than ", maxMarkers, " markers into multiple chunks to save the memory usage."))
+  print(paste0("Based on the sample size, we divide region with more than ", maxMarkers, " markers into multiple chunks to save memory usage."))
   print("If the memory usage still exceed the memory you request, please set a smaller POLMM.control$memory_chunk.")
   
   StdStat_cutoff = POLMM.control$SPA_cutoff;
@@ -126,7 +126,7 @@ POLMM.Region = function(objNull,
                           POLMM.control$missing_cutoff,
                           POLMM.control$max_maf_region,
                           POLMM.control$kernel,
-                          POLMM.control$weights.beta)
+                          POLMM.control$weights_beta)
     
     StatVec = OutList$StatVec
     VarSVec = diag(OutList$VarSMat)
@@ -137,7 +137,7 @@ POLMM.Region = function(objNull,
     adjPVec = OutList$pvalVec;
     adjVarSVec = StatVec^2 / qchisq(adjPVec, df = 1, lower.tail = F)
     
-    # weights = Get_Weights(POLMM.control$kernel, OutList$freqVec, POLMM.control$weights.beta)
+    # weights = Get_Weights(POLMM.control$kernel, OutList$freqVec, POLMM.control$weights_beta)
     weights = OutList$weightVec
     
     # Annotation matrix: 2020-12-21
@@ -164,7 +164,7 @@ POLMM.Region = function(objNull,
       
       out_SKAT_List = try(SKAT:::Met_SKAT_Get_Pvalue(Score = wStatVec, 
                                                      Phi = wadjVarSMat,
-                                                     r.corr = POLMM.control$r.corr, 
+                                                     r.corr = POLMM.control$r_corr, 
                                                      method = "optimal.adj", 
                                                      Score.Resampling = NULL),
                           silent = TRUE)
