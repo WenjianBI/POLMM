@@ -26,7 +26,7 @@
 #' @details 
 #' More information about the list of 'SKAT.control'
 #' \itemize{
-#' \item{memory.chunk: a cutoff (Gb) to determine how many markers are in one chunk for region-based analysis [default=4].}
+#' \item{memory_chunk: a cutoff (Gb) to determine how many markers are in one chunk for region-based analysis [default=4].}
 #' \item{kernel: how to weight markers for region-based analysis [default="linear.weighted"].}
 #' \item{method: method to conduct region-based analysis [default="method"].}
 #' \item{weights.beta:  [default=c(1,25)].}
@@ -96,18 +96,18 @@ POLMM.Region = function(objNull,
                  POLMM.control$tolPCG,
                  POLMM.control$maxiterPCG)
   
-  memory.chunk = POLMM.control$memory.chunk
+  memory_chunk = POLMM.control$memory_chunk
   
   # to be continued
   n = length(SubjID.step1)
   J = max(objNull$yVec)
   p = ncol(objNull$Cova)
   NonZero_cutoff = floor(log(1e7, J))  # for efficient resampling (ER)
-  maxMarkers = getMaxMarkers(POLMM.control$memory.chunk, n, J, p);
+  maxMarkers = getMaxMarkers(memory_chunk, n, J, p);
   
-  print(paste0("The current POLMM.control$memory.chunk is ", POLMM.control$memory.chunk,"(GB)."))
+  print(paste0("The current POLMM.control$memory_chunk is ", memory_chunk,"(GB)."))
   print(paste0("Based on the sample size, we divide region with more than ", maxMarkers, " markers into multiple chunks to save the memory usage."))
-  print("If the memory usage still exceed the memory you request, please set a smaller POLMM.control$memory.chunk.")
+  print("If the memory usage still exceed the memory you request, please set a smaller POLMM.control$memory_chunk.")
   
   StdStat_cutoff = POLMM.control$SPAcutoff;
   

@@ -244,7 +244,7 @@ makeSPmatR = function(SparseGRM,   # three columns of ID1, ID2, and value
   return(SPmatR)
 }
 
-getMaxMarkers = function(memory.chunk,
+getMaxMarkers = function(memory_chunk,
                          n, J, p)
 {
   # THE BELOW include some large matrix that takes most of the memory usage
@@ -260,10 +260,10 @@ getMaxMarkers = function(memory.chunk,
   # arma::mat m_CovaMat;     // n(J-1) x p
   
   fixed.memory = 8*(3*(n*(J-1)*p)+2*(n*p)) / 1e9
-  if(memory.chunk < fixed.memory)
-    stop(paste0("Please give POLMM.control$memory.chunk greater than ", fixed.memory,"."))
+  if(memory_chunk < fixed.memory)
+    stop(paste0("Please give POLMM.control$memory_chunk greater than ", fixed.memory,"."))
   
-  maxMarkers = (memory.chunk - fixed.memory) * 1e9 / (8*n)
+  maxMarkers = (memory_chunk - fixed.memory) * 1e9 / (8*n)
   maxMarkers = maxMarkers / 2;
   maxMarkers = floor(maxMarkers)
   
