@@ -142,6 +142,8 @@ POLMM.Region = function(objNull,
     
     # Annotation matrix: 2020-12-21
     posVec = OutList$posVec   # index of SNPs passing criterion (MAF, missing rate, et al.)
+    print(posVec)
+    print(dim(AnnoGene))
     AnnoGene = AnnoGene[posVec,,drop=F]
     q = ncol(AnnoGene)   # number of annotation: column 1 is always 1s
     
