@@ -162,7 +162,7 @@ POLMM.Region = function(objNull,
       AnnoName = colnames(AnnoMat)[i]
       AnnoWeights = weights * AnnoMat[,i]
       wr0 = sqrt(r0) * AnnoWeights
-      wStatVec = StatVec * weights
+      wStatVec = StatVec * AnnoWeights
       wadjVarSMat = t(OutList$VarSMat * wr0) * wr0
       wadjVarSMat = wadjVarSMat * max(OutList$rBT, 1)
       
