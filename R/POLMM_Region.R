@@ -140,9 +140,11 @@ POLMM.Region = function(objNull,
     # weights = Get_Weights(POLMM.control$kernel, OutList$freqVec, POLMM.control$weights_beta)
     weights = OutList$weightVec
     
-    # Annotation matrix: 2020-12-21
-    posVec = OutList$posVec   # index of SNPs passing criterion (MAF, missing rate, et al.)
+    # Annotation matrix: 2020-12-21 ("+1" because C++ starts from 0 and R starts from 1)
+    posVec = OutList$posVec + 1   # index of SNPs passing criterion (MAF, missing rate, et al.)
     print(posVec)
+    print(length(posVec))
+    print(length(weights))
     print(dim(AnnoMat))
     AnnoMat = AnnoMat[posVec,,drop=F]
     q = ncol(AnnoMat)   # number of annotation: column 1 is always 1s

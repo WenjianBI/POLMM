@@ -419,7 +419,7 @@ Rcpp::List MAIN_REGION(std::vector<std::string> t_MarkerReqstd,
                                           Rcpp::Named("flipVec") = flipVec,
                                           Rcpp::Named("pvalNormVec") = pvalNormVec,
                                           Rcpp::Named("pvalVec") = pvalVec,
-                                          Rcpp::Named("posVec") = posVec,
+                                          Rcpp::Named("posVec") = posVec,    // starting from 0, not 1
                                           Rcpp::Named("rBT") = rBT);
   return OutList;
 }
