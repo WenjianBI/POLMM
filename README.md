@@ -18,7 +18,7 @@ library(POLMM)
 ```
 Current version is 0.2.3. The package installation typically requires < 3 minutes on a normal desktop computer. 
 
-Please do not hesitate to contact me (wenjianb@umich.edu) if you meet any problem. Suggestions or comments are also welcome.
+Please do not hesitate to contact me (wenjianb@bjmu.edu.cn) if you meet any problem. Suggestions or comments are also welcome.
 
 ### We support Dense GRM and Sparse GRM to adjust for sample relatedness
 
