@@ -33,7 +33,7 @@ Please do not hesitate to contact me (wenjianb@pku.edu.cn) if you meet any probl
 ### About the effect direction
 For POLMM() function, the input is a genotype matrix. For each marker with genotype vector of GVec, we first calculate the allele frequency (AF) of mean(GVec)/2, if the AF > 0.5, then we use GVec = 2 - GVec instead (to reduce computational time) and set switch.alllel = TRUE. Hence, if switch.allele = TRUE, the effect direction is changed.
 
-For POLMM.plink() function, we first use seqminer::readPlinkToMatrixByIndex() function to get a genotype matrix from PLINK files. In seqminer (version 8.0), this function follows "ref-first", that is, A1 is usually major(REF) and A2 is usually minor(ALT). For each marker, genotype matrix is the counts of A2 allele.  
+For POLMM.plink() function, we first use seqminer::readPlinkToMatrixByIndex() function to get a genotype matrix from PLINK files. In seqminer (version 8.0), this function follows "ref-first", that is, A1 is usually major(REF) and A2 is usually minor(ALT). For each marker, genotype matrix is the counts of A2 allele and beta corresponds to A2 allele. If switch.allele = TRUE, then beta corresponds to A1 allele.  
 
 
 ### PheWeb for UK Biobank data analysis results
