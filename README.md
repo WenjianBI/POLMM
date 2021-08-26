@@ -18,7 +18,7 @@ library(POLMM)
 ```
 Current version is 0.2.3. The package installation typically requires < 3 minutes on a normal desktop computer. 
 
-Please do not hesitate to contact me (wenjianb@bjmu.edu.cn) if you meet any problem. Suggestions or comments are also welcome.
+Please do not hesitate to contact me (wenjianb@pku.edu.cn) if you meet any problem. Suggestions or comments are also welcome.
 
 ### We support Dense GRM and Sparse GRM to adjust for sample relatedness
 
@@ -29,6 +29,12 @@ Please do not hesitate to contact me (wenjianb@bjmu.edu.cn) if you meet any prob
 **How to make an R object of SparseGRM:**  
 1. Use function getSparseGRMParallel() to generate GRM files for each chromosome (can split all subjects into multiple parts: we use 250 parts for UK Biobank analysis)
 1. Use function getSparseGRM() to combine all GRM files to generate an R object of "SparseGRM" to be passed to main function POLMM_Null_Model() 
+
+### About the effect direction
+For POLMM() function, the input is a genotype matrix. For each marker with genotype vector of GVec, we first calculate the allele frequency (AF) of mean(GVec)/2, if the AF > 0.5, then we use GVec = 2 - GVec instead (to reduce computational time) and set switch.alllel = TRUE. Hence, if switch.allele = TRUE, the effect direction is changed.
+
+For POLMM.plink() function, we first use seqminer::readPlinkToMatrixByIndex() function to get a genotype matrix from PLINK files. In seqminer (version 8.0), this function follows "ref-first", that is, A1 is usually major(REF) and A2 is usually minor(ALT). For each marker, genotype matrix is the counts of A2 allele.  
+
 
 ### PheWeb for UK Biobank data analysis results
 
