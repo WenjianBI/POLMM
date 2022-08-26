@@ -1,6 +1,14 @@
 # POLMM
 Proportional Odds Logistic Mixed Model (POLMM) for ordinal categorical data analysis
 
+## Note on 2022-08-26
+
+We make a new package GRAB in which POLMM / POLMM-GENE approaches are supported. The below is a website for GRAB package: https://wenjianbi.github.io/grab.github.io/. Please check it for more recent update.
+
+**The package POLMM will not be updated.**
+
+## Previous README before 2022-08-26
+
 ### Software dependencies and operating systems
 The package has been tested under linux and windows systems. 
 
